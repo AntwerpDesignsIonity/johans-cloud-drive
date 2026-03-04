@@ -1,6 +1,9 @@
 {
   "hosting": {
-    "public": "public",
+    "public": "ics-app/build",
+    "rewrites": [
+      { "source": "**", "destination": "/index.html" }
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",
