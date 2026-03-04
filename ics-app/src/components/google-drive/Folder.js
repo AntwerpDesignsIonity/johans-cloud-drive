@@ -5,12 +5,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faFolder } from "@fortawesome/free-solid-svg-icons"
 
 export default function Folder({ folder }) {
+  const encodedPath = btoa(folder.storagePath || folder.id)
   return (
     <Button
-      to={{
-        pathname: `/folder/${folder.id}`,
-        state: { folder: folder },
-      }}
+      to={`/folder/${encodedPath}`}
       variant="outline-dark"
       className="text-truncate w-100"
       as={Link}

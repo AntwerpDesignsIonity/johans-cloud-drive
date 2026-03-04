@@ -2,42 +2,32 @@ import React, { useState } from "react"
 import { Button, Modal, Form } from "react-bootstrap"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faFolderPlus } from "@fortawesome/free-solid-svg-icons"
-import { database } from "../../firebase"
+import { storage } from "../../firebase"
 import { useAuth } from "../../contexts/AuthContext"
-import { ROOT_FOLDER } from "../../hooks/useFolder"
 
-export default function AddFolderButton({ currentFolder }) {
+export default function AddFolderButton({ currentFolder, onCreated }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const { currentUser } = useAuth()
 
-  function openModal() {
-    setOpen(true)
-  }
-
-  function closeModal() {
-    setOpen(false)
-  }
+  function openModal() { setOpen(true) }
+  function closeModal() { setOpen(false) }
 
   function handleSubmit(e) {
     e.preventDefault()
-
-    if (currentFolder == null) return
-
-    const path = [...currentFolder.path]
-    if (currentFolder !== ROOT_FOLDER) {
-      path.push({ name: currentFolder.name, id: currentFolder.id })
-    }
-
-    database.folders.add({
-      name: name,
-      parentId: currentFolder.id,
-      userId: currentUser.uid,
-      path: path,
-      createdAt: database.getCurrentTimestamp(),
-    })
-    setName("")
-    closeModal()
+    if (!name.trim()) return
+    const currentPath = currentFolder ? currentFolder.storagePath || "" : ""
+    const placeholderPath = `files/${currentUser.uid}/${currentPath}${name.trim()}/.keep`
+    // Upload tiny placeholder to create the virtual folder in Storage
+    storage
+      .ref(placeholderPath)
+      .putString("")
+      .then(() => {
+        if (onCreated) onCreated()
+        setName("")
+        closeModal()
+      })
+      .catch(err => console.error("Create folder error:", err))
   }
 
   return (

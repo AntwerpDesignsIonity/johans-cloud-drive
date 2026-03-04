@@ -7,13 +7,13 @@ import Folder from "./Folder"
 import File from "./File"
 import Navbar from "./Navbar"
 import FolderBreadcrumbs from "./FolderBreadcrumbs"
-import { useParams, useLocation } from "react-router-dom"
+import { useParams } from "react-router-dom"
 import Footer from "../Footer"
 
 export default function Dashboard() {
-  const { folderId } = useParams()
-  const { state = {} } = useLocation()
-  const { folder, childFolders, childFiles } = useFolder(folderId, state.folder)
+  const { encodedPath } = useParams()
+  const storagePath = encodedPath ? atob(encodedPath) : ""
+  const { folder, childFolders, childFiles } = useFolder(storagePath)
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>

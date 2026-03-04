@@ -3,8 +3,7 @@ import ReactDOM from "react-dom"
 import { faFileUpload } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { useAuth } from "../../contexts/AuthContext"
-import { storage, database } from "../../firebase"
-import { ROOT_FOLDER } from "../../hooks/useFolder"
+import { storage } from "../../firebase"
 import { v4 as uuidV4 } from "uuid"
 import { ProgressBar, Toast } from "react-bootstrap"
 
@@ -21,13 +20,11 @@ export default function AddFileButton({ currentFolder }) {
       ...prevUploadingFiles,
       { id: id, name: file.name, progress: 0, error: false },
     ])
-    const filePath =
-      currentFolder === ROOT_FOLDER
-        ? `${currentFolder.path.join("/")}/${file.name}`
-        : `${currentFolder.path.join("/")}/${currentFolder.name}/${file.name}`
+    const currentPath = currentFolder ? currentFolder.storagePath || "" : ""
+    const filePath = `${currentPath}${file.name}`
 
     const uploadTask = storage
-      .ref(`/files/${currentUser.uid}/${filePath}`)
+      .ref(`files/${currentUser.uid}/${filePath}`)
       .put(file)
 
     uploadTask.on(
@@ -61,27 +58,9 @@ export default function AddFileButton({ currentFolder }) {
           })
         })
 
-        uploadTask.snapshot.ref.getDownloadURL().then(url => {
-          database.files
-            .where("name", "==", file.name)
-            .where("userId", "==", currentUser.uid)
-            .where("folderId", "==", currentFolder.id)
-            .get()
-            .then(existingFiles => {
-              const existingFile = existingFiles.docs[0]
-              if (existingFile) {
-                existingFile.ref.update({ url: url })
-              } else {
-                database.files.add({
-                  url: url,
-                  name: file.name,
-                  createdAt: database.getCurrentTimestamp(),
-                  folderId: currentFolder.id,
-                  userId: currentUser.uid,
-                })
-              }
-            })
-        })
+        // File is now in Storage — no Firestore write needed
+        // Trigger a re-read by dispatching a custom event
+        window.dispatchEvent(new Event("ics-storage-updated"))
       }
     )
   }

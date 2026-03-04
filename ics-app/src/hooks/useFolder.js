@@ -1,6 +1,6 @@
 import { useReducer, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
-import { database } from "../firebase"
+import { storage } from "../firebase"
 
 const ACTIONS = {
   SELECT_FOLDER: "select-folder",
@@ -9,13 +9,23 @@ const ACTIONS = {
   SET_CHILD_FILES: "set-child-files",
 }
 
-export const ROOT_FOLDER = { name: "Root", id: null, path: [] }
+export const ROOT_FOLDER = { name: "Root", id: null, storagePath: "", path: [] }
+
+function buildAncestorPath(storagePath) {
+  const parts = storagePath.split("/").filter(Boolean)
+  const ancestors = []
+  let built = ""
+  for (let i = 0; i < parts.length - 1; i++) {
+    built += parts[i] + "/"
+    ancestors.push({ name: parts[i], id: built, storagePath: built })
+  }
+  return ancestors
+}
 
 function reducer(state, { type, payload }) {
   switch (type) {
     case ACTIONS.SELECT_FOLDER:
       return {
-        folderId: payload.folderId,
         folder: payload.folder,
         childFiles: [],
         childFolders: [],
