@@ -39,7 +39,11 @@ export default function Dashboard() {
 
   const isEmpty = sortedFolders.length === 0 && sortedFiles.length === 0
 
-  const ITEM_W = "215px"
+  const GRID_STYLE = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+    gap: "10px",
+  }
   const LABEL_STYLE = {
     fontSize: "0.72rem",
     fontWeight: 600,
@@ -55,7 +59,17 @@ export default function Dashboard() {
       <Container fluid style={{ flex: 1, padding: "1rem 1.25rem" }}>
 
         {/* ── Top: breadcrumbs + upload / new-folder ──────────────────── */}
-        <div className="d-flex align-items-center flex-wrap mb-2" style={{ gap: "8px" }}>
+        <div
+          className="d-flex align-items-center flex-wrap mb-2"
+          style={{
+            gap: "8px",
+            background: "#fff",
+            borderRadius: "8px",
+            padding: "8px 12px",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            border: "1px solid #e3e8ef",
+          }}
+        >
           <FolderBreadcrumbs currentFolder={folder} />
           <div className="ml-auto d-flex" style={{ gap: "6px" }}>
             <AddFileButton currentFolder={folder} />
@@ -80,12 +94,12 @@ export default function Dashboard() {
               <FontAwesomeIcon icon={faStar} className="mr-1" style={{ color: "#f5c518" }} />
               Starred
             </p>
-            <div className="d-flex flex-wrap" style={{ gap: "8px" }}>
+            <div style={GRID_STYLE}>
               {favFolders.map(f => (
-                <div key={f.id} style={{ width: ITEM_W }}><Folder folder={f} /></div>
+                <Folder key={f.id} folder={f} />
               ))}
               {favFiles.map(f => (
-                <div key={f.id} style={{ width: ITEM_W }}><File file={f} /></div>
+                <File key={f.id} file={f} />
               ))}
             </div>
             <hr className="mt-3 mb-3" />
@@ -96,9 +110,9 @@ export default function Dashboard() {
         {sortedFolders.length > 0 && (
           <div className="mb-3">
             <p style={LABEL_STYLE}>Folders</p>
-            <div className="d-flex flex-wrap" style={{ gap: "8px" }}>
+            <div style={GRID_STYLE}>
               {sortedFolders.map(f => (
-                <div key={f.id} style={{ width: ITEM_W }}><Folder folder={f} /></div>
+                <Folder key={f.id} folder={f} />
               ))}
             </div>
           </div>
@@ -108,9 +122,9 @@ export default function Dashboard() {
         {sortedFiles.length > 0 && (
           <div className="mb-3">
             <p style={LABEL_STYLE}>Files</p>
-            <div className="d-flex flex-wrap" style={{ gap: "8px" }}>
+            <div style={GRID_STYLE}>
               {sortedFiles.map(f => (
-                <div key={f.id} style={{ width: ITEM_W }}><File file={f} /></div>
+                <File key={f.id} file={f} />
               ))}
             </div>
           </div>

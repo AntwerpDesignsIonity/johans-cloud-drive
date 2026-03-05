@@ -67,8 +67,9 @@ export default function AddFileButton({ currentFolder }) {
 
   return (
     <>
-      <label className="btn btn-outline-success btn-sm m-0 mr-2">
+      <label className="btn btn-outline-success btn-sm m-0" style={{ display: "flex", alignItems: "center", gap: "5px", cursor: "pointer" }}>
         <FontAwesomeIcon icon={faFileUpload} />
+        <span>Upload</span>
         <input
           type="file"
           onChange={handleUpload}

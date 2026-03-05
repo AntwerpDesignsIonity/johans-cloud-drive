@@ -5,13 +5,16 @@ import { faFolderPlus } from "@fortawesome/free-solid-svg-icons"
 import { storage } from "../../firebase"
 import { useAuth } from "../../contexts/AuthContext"
 
-export default function AddFolderButton({ currentFolder, onCreated }) {
+export default function AddFolderButton({ currentFolder }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const { currentUser } = useAuth()
 
   function openModal() { setOpen(true) }
-  function closeModal() { setOpen(false) }
+  function closeModal() {
+    setOpen(false)
+    setName("")
+  }
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -23,8 +26,8 @@ export default function AddFolderButton({ currentFolder, onCreated }) {
       .ref(placeholderPath)
       .putString("")
       .then(() => {
-        if (onCreated) onCreated()
-        setName("")
+        // Trigger a re-read by dispatching the same event AddFileButton uses
+        window.dispatchEvent(new Event("ics-storage-updated"))
         closeModal()
       })
       .catch(err => console.error("Create folder error:", err))
@@ -32,28 +35,38 @@ export default function AddFolderButton({ currentFolder, onCreated }) {
 
   return (
     <>
-      <Button onClick={openModal} variant="outline-success" size="sm">
+      <Button onClick={openModal} variant="outline-primary" size="sm" style={{ display: "flex", alignItems: "center", gap: "5px" }}>
         <FontAwesomeIcon icon={faFolderPlus} />
+        <span>New Folder</span>
       </Button>
-      <Modal show={open} onHide={closeModal}>
+
+      <Modal show={open} onHide={closeModal} centered>
         <Form onSubmit={handleSubmit}>
+          <Modal.Header closeButton style={{ borderBottom: "2px solid #0066cc", background: "#f8faff" }}>
+            <Modal.Title style={{ fontSize: "1rem", fontWeight: 600, color: "#003d80" }}>
+              <FontAwesomeIcon icon={faFolderPlus} className="mr-2" style={{ color: "#0066cc" }} />
+              Create New Folder
+            </Modal.Title>
+          </Modal.Header>
           <Modal.Body>
             <Form.Group>
-              <Form.Label>Folder Name</Form.Label>
+              <Form.Label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Folder Name</Form.Label>
               <Form.Control
                 type="text"
+                placeholder="Enter folder name…"
                 required
+                autoFocus
                 value={name}
                 onChange={e => setName(e.target.value)}
               />
             </Form.Group>
           </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={closeModal}>
-              Close
+          <Modal.Footer style={{ background: "#f8faff" }}>
+            <Button variant="outline-secondary" size="sm" onClick={closeModal}>
+              Cancel
             </Button>
-            <Button variant="success" type="submit">
-              Add Folder
+            <Button variant="primary" size="sm" type="submit">
+              Create Folder
             </Button>
           </Modal.Footer>
         </Form>

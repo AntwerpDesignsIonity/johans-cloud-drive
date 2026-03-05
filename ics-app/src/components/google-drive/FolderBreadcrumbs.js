@@ -15,7 +15,7 @@ export default function FolderBreadcrumbs({ currentFolder }) {
   return (
     <Breadcrumb
       className="flex-grow-1"
-      listProps={{ className: "bg-white pl-0 m-0" }}
+      listProps={{ className: "pl-0 m-0", style: { background: "transparent" } }}
     >
       {path.map(folder => (
         <Breadcrumb.Item
