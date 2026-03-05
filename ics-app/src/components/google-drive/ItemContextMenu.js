@@ -7,6 +7,7 @@ import { Dropdown } from "react-bootstrap"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
   faEllipsisV,
+  faStar,
   faArrowRight,
   faCopy,
   faPencilAlt,
@@ -18,6 +19,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons"
 import { storage } from "../../firebase"
 import { useAuth } from "../../contexts/AuthContext"
+import { toggleFavorite } from "../../hooks/useFolder"
 import { summarizeFile, ocrFile } from "../../services/gemini"
 import AiResultModal from "./AiResultModal"
 import MoveItemModal from "./MoveItemModal"
@@ -103,7 +105,17 @@ export default function ItemContextMenu({ item, itemType }) {
           <FontAwesomeIcon icon={faEllipsisV} />
         </Dropdown.Toggle>
 
-        <Dropdown.Menu alignRight style={{ fontSize: "0.85rem", minWidth: "175px" }}>
+        <Dropdown.Menu
+          alignRight
+          style={{
+            fontSize: "0.84rem",
+            minWidth: "185px",
+            borderRadius: "10px",
+            border: "1.5px solid #dde4ee",
+            boxShadow: "0 6px 24px rgba(0,51,102,0.13)",
+            padding: "4px 0",
+          }}
+        >
           {/* ─── File-only: open & download ─── */}
           {itemType === "file" && (
             <>
@@ -129,6 +141,17 @@ export default function ItemContextMenu({ item, itemType }) {
           )}
 
           {/* ─── Universal actions ─── */}
+          <Dropdown.Item
+            onClick={e => { e.stopPropagation(); toggleFavorite(currentUser.uid, item.storagePath); window.dispatchEvent(new Event('ics-storage-updated')) }}
+            style={{ display: "flex", alignItems: "center", gap: "8px" }}
+          >
+            <FontAwesomeIcon
+              icon={faStar}
+              style={{ color: item.favorite ? "#f5c518" : "#bbb", width: 14 }}
+            />
+            {item.favorite ? "Remove Favorite" : "Add to Favorites"}
+          </Dropdown.Item>
+
           <Dropdown.Item
             onClick={e => { e.stopPropagation(); setShowRename(true) }}
             style={{ display: "flex", alignItems: "center", gap: "8px" }}

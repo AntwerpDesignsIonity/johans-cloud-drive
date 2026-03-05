@@ -41,16 +41,8 @@ export default function Dashboard() {
 
   const GRID_STYLE = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-    gap: "10px",
-  }
-  const LABEL_STYLE = {
-    fontSize: "0.72rem",
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    color: "#9aa",
-    marginBottom: "8px",
+    gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
+    gap: "9px",
   }
 
   return (
@@ -64,10 +56,10 @@ export default function Dashboard() {
           style={{
             gap: "8px",
             background: "#fff",
-            borderRadius: "8px",
-            padding: "8px 12px",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-            border: "1px solid #e3e8ef",
+            borderRadius: "10px",
+            padding: "8px 14px",
+            boxShadow: "0 1px 6px rgba(0,51,102,0.08)",
+            border: "1.5px solid #dde4ee",
           }}
         >
           <FolderBreadcrumbs currentFolder={folder} />
@@ -90,8 +82,8 @@ export default function Dashboard() {
         {/* ── Starred quick-access ─────────────────────────────────────── */}
         {hasFavorites && (
           <div className="mb-4">
-            <p style={LABEL_STYLE}>
-              <FontAwesomeIcon icon={faStar} className="mr-1" style={{ color: "#f5c518" }} />
+            <p className="ics-section-label">
+              <FontAwesomeIcon icon={faStar} style={{ color: "#f5c518" }} />
               Starred
             </p>
             <div style={GRID_STYLE}>
@@ -102,14 +94,14 @@ export default function Dashboard() {
                 <File key={f.id} file={f} />
               ))}
             </div>
-            <hr className="mt-3 mb-3" />
+            <hr style={{ border: "none", borderTop: "1px solid #dde4ee", margin: "1rem 0 0.75rem" }} />
           </div>
         )}
 
         {/* ── Folders ──────────────────────────────────────────────────── */}
         {sortedFolders.length > 0 && (
           <div className="mb-3">
-            <p style={LABEL_STYLE}>Folders</p>
+            <p className="ics-section-label">Folders</p>
             <div style={GRID_STYLE}>
               {sortedFolders.map(f => (
                 <Folder key={f.id} folder={f} />
@@ -121,7 +113,7 @@ export default function Dashboard() {
         {/* ── Files ────────────────────────────────────────────────────── */}
         {sortedFiles.length > 0 && (
           <div className="mb-3">
-            <p style={LABEL_STYLE}>Files</p>
+            <p className="ics-section-label">Files</p>
             <div style={GRID_STYLE}>
               {sortedFiles.map(f => (
                 <File key={f.id} file={f} />
@@ -132,15 +124,27 @@ export default function Dashboard() {
 
         {/* ── Empty state ──────────────────────────────────────────────── */}
         {isEmpty && (
-          <div className="text-center py-5" style={{ color: "#bbb" }}>
+          <div
+            className="text-center"
+            style={{
+              padding: "3.5rem 1rem",
+              background: "#fff",
+              borderRadius: "12px",
+              border: "1.5px dashed #dde4ee",
+              marginTop: "0.5rem",
+            }}
+          >
             <FontAwesomeIcon
               icon={faFolderEmpty}
-              style={{ fontSize: "3rem", marginBottom: "1rem", opacity: 0.25 }}
+              style={{ fontSize: "3.5rem", color: "#c5d0de", marginBottom: "1rem" }}
             />
-            <p className="mb-0" style={{ fontSize: "0.9rem" }}>
+            <p className="mb-1" style={{ fontSize: "0.95rem", fontWeight: 600, color: "#6b7d92" }}>
+              {showFavOnly ? "No starred items here" : "This folder is empty"}
+            </p>
+            <p className="mb-0" style={{ fontSize: "0.82rem", color: "#a0b0c4" }}>
               {showFavOnly
-                ? "No starred items in this folder."
-                : "This folder is empty — upload files or create a folder to get started."}
+                ? "Star files or folders to see them here."
+                : "Upload files or create a folder to get started."}
             </p>
           </div>
         )}

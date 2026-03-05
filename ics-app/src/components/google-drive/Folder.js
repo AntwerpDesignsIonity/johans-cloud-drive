@@ -1,7 +1,7 @@
 import React from "react"
 import { Link } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faFolder } from "@fortawesome/free-solid-svg-icons"
+import { faFolder, faStar } from "@fortawesome/free-solid-svg-icons"
 import ItemContextMenu from "./ItemContextMenu"
 
 export default function Folder({ folder }) {
@@ -9,37 +9,34 @@ export default function Folder({ folder }) {
 
   return (
     <div
-      className="d-flex align-items-center rounded px-2 py-1 w-100"
-      style={{
-        background: "#fff",
-        border: "1px solid #e3e8ef",
-        gap: "4px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-        minWidth: 0,
-        transition: "box-shadow 0.15s, border-color 0.15s",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,102,204,0.18)"
-        e.currentTarget.style.borderColor = "#0066cc"
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)"
-        e.currentTarget.style.borderColor = "#e3e8ef"
-      }}
+      className="ics-item-card ics-fade-in d-flex align-items-center px-2"
+      style={{ minWidth: 0, gap: "4px", height: "42px" }}
     >
       <Link
         to={`/folder/${encodedPath}`}
         className="d-flex align-items-center flex-grow-1 text-dark text-decoration-none"
-        style={{ minWidth: 0, gap: "7px" }}
+        style={{ minWidth: 0, gap: "9px", padding: "0 2px" }}
         title={folder.name}
       >
-        <FontAwesomeIcon
-          icon={faFolder}
-          style={{ color: "#f5a623", flexShrink: 0, fontSize: "0.9rem" }}
-        />
-        <span className="text-truncate" style={{ fontSize: "0.82rem", lineHeight: 1.4 }}>
+        {/* Folder icon with gradient background chip */}
+        <span
+          style={{
+            width: 28, height: 28,
+            borderRadius: 6,
+            background: "linear-gradient(135deg, #ffe0a0 0%, #ffb800 100%)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+            boxShadow: "0 1px 4px rgba(245,166,35,0.3)",
+          }}
+        >
+          <FontAwesomeIcon icon={faFolder} style={{ color: "#c07a00", fontSize: "0.82rem" }} />
+        </span>
+        <span className="text-truncate" style={{ fontSize: "0.83rem", fontWeight: 500, lineHeight: 1.3 }}>
           {folder.name}
         </span>
+        {folder.favorite && (
+          <FontAwesomeIcon icon={faStar} style={{ color: "#f5c518", fontSize: "0.65rem", flexShrink: 0, marginLeft: "2px" }} />
+        )}
       </Link>
       <ItemContextMenu item={folder} itemType="folder" />
     </div>

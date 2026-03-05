@@ -1,6 +1,7 @@
-import React from "react"
+import React, { useState } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faFile,
+import {
+  faFile,
   faImage,
   faFilePdf,
   faFileWord,
@@ -10,7 +11,10 @@ import { faFile,
   faFileAudio,
   faFileVideo,
   faFileCode,
+  faStar,
 } from "@fortawesome/free-solid-svg-icons"
+import { useAuth } from "../../contexts/AuthContext"
+import { toggleFavorite } from "../../hooks/useFolder"
 import ItemContextMenu from "./ItemContextMenu"
 
 const FILE_TYPES = [
@@ -33,43 +37,69 @@ function getFileTypeInfo(fileName) {
   return { icon: faFile, color: "#78909C" }
 }
 
+const IMAGE_EXTS = ["jpg","jpeg","png","gif","webp","bmp","svg"]
+function isImage(name) { return IMAGE_EXTS.includes((name.split(".").pop()||"").toLowerCase()) }
+
 export default function File({ file }) {
   const { icon, color } = getFileTypeInfo(file.name)
+  const { currentUser } = useAuth()
+  const [imgErr, setImgErr] = useState(false)
+  const showThumb = isImage(file.name) && file.url && !imgErr
+
+  function handleFavToggle(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    toggleFavorite(currentUser.uid, file.storagePath)
+  }
 
   return (
     <div
-      className="d-flex align-items-center rounded px-2 py-1 w-100"
-      style={{
-        background: "#fff",
-        border: "1px solid #e3e8ef",
-        gap: "4px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-        minWidth: 0,
-        transition: "box-shadow 0.15s, border-color 0.15s",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,102,204,0.18)"
-        e.currentTarget.style.borderColor = "#0066cc"
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)"
-        e.currentTarget.style.borderColor = "#e3e8ef"
-      }}
+      className="ics-item-card ics-fade-in d-flex align-items-center px-2"
+      style={{ minWidth: 0, gap: "4px", height: "42px" }}
     >
-      {/* Clickable file name + icon */}
+      {/* Clickable file name + icon/thumb */}
       <a
         href={file.url}
         target="_blank"
         rel="noopener noreferrer"
         className="d-flex align-items-center flex-grow-1 text-dark text-decoration-none"
-        style={{ minWidth: 0, gap: "7px" }}
+        style={{ minWidth: 0, gap: "9px", padding: "0 2px" }}
         title={file.name}
       >
-        <FontAwesomeIcon icon={icon} style={{ color, flexShrink: 0, fontSize: "0.9rem" }} />
-        <span className="text-truncate" style={{ fontSize: "0.82rem", lineHeight: 1.4 }}>
+        {showThumb ? (
+          <img
+            src={file.url}
+            alt=""
+            className="ics-thumb"
+            onError={() => setImgErr(true)}
+          />
+        ) : (
+          <span
+            style={{
+              width: 28, height: 28,
+              borderRadius: 6,
+              background: `${color}18`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <FontAwesomeIcon icon={icon} style={{ color, fontSize: "0.82rem" }} />
+          </span>
+        )}
+        <span className="text-truncate" style={{ fontSize: "0.83rem", fontWeight: 500, lineHeight: 1.3 }}>
           {file.name}
         </span>
       </a>
+
+      {/* Favorite star */}
+      <button
+        onClick={handleFavToggle}
+        className="btn btn-link p-0"
+        style={{ color: file.favorite ? "#f5c518" : "#d0d8e4", lineHeight: 1, flexShrink: 0, fontSize: "0.75rem", transition: "color 0.15s" }}
+        title={file.favorite ? "Remove from favorites" : "Add to favorites"}
+      >
+        <FontAwesomeIcon icon={faStar} />
+      </button>
 
       {/* Three-dot menu */}
       <ItemContextMenu item={file} itemType="file" />

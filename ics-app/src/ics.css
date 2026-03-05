@@ -1,0 +1,201 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Ionity Cloud Storage – Global Stylesheet
+   Author: Antwerp Designs / Johan Wilhelm van Antwerp
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ── CSS Variables ─────────────────────────────────────────────────────── */
+:root {
+  --ics-navy:        #002244;
+  --ics-navy-mid:    #003d80;
+  --ics-blue:        #0066cc;
+  --ics-blue-light:  #3d8fe0;
+  --ics-blue-pale:   #e8f1fb;
+  --ics-bg:          #f0f4f8;
+  --ics-card:        #ffffff;
+  --ics-border:      #dde4ee;
+  --ics-text:        #1c2b3a;
+  --ics-text-muted:  #7a8fa6;
+  --ics-shadow:      0 1px 4px rgba(0,51,102,0.08);
+  --ics-shadow-md:   0 3px 12px rgba(0,51,102,0.13);
+  --ics-shadow-hover:0 6px 22px rgba(0,102,204,0.2);
+  --ics-radius:      10px;
+  --ics-radius-sm:   6px;
+  --ics-transition:  all 0.18s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--ics-bg);
+  color: var(--ics-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── ICS Item Card (File & Folder) ─────────────────────────────────────── */
+.ics-item-card {
+  background: var(--ics-card);
+  border: 1.5px solid var(--ics-border);
+  border-radius: var(--ics-radius);
+  box-shadow: var(--ics-shadow);
+  transition: var(--ics-transition);
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+.ics-item-card:hover {
+  box-shadow: var(--ics-shadow-hover);
+  border-color: var(--ics-blue);
+  transform: translateY(-2px);
+}
+
+/* ── Section Labels ────────────────────────────────────────────────────── */
+.ics-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ics-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+.ics-section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--ics-border);
+}
+
+/* ── Pill Buttons ──────────────────────────────────────────────────────── */
+.ics-pill {
+  border-radius: 99px !important;
+  font-size: 0.78rem !important;
+  font-weight: 500 !important;
+  padding: 4px 13px !important;
+  transition: var(--ics-transition) !important;
+  letter-spacing: 0.01em;
+}
+.ics-pill:focus { box-shadow: 0 0 0 3px rgba(0,102,204,0.2) !important; }
+
+/* ── Navbar Avatar ─────────────────────────────────────────────────────── */
+.ics-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0066cc 0%, #00a3ff 100%);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255,255,255,0.25);
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  transition: var(--ics-transition);
+  text-transform: uppercase;
+}
+.ics-avatar:hover {
+  border-color: rgba(255,255,255,0.65);
+  transform: scale(1.08);
+}
+
+/* ── Breadcrumb custom ─────────────────────────────────────────────────── */
+.ics-breadcrumb ol { background: transparent !important; padding: 0 !important; margin: 0 !important; }
+.ics-breadcrumb .breadcrumb-item + .breadcrumb-item::before { color: var(--ics-text-muted); }
+.ics-breadcrumb .breadcrumb-item a { color: var(--ics-blue); font-weight: 500; text-decoration: none; }
+.ics-breadcrumb .breadcrumb-item a:hover { text-decoration: underline; }
+.ics-breadcrumb .breadcrumb-item.active { color: var(--ics-text); font-weight: 600; }
+
+/* ── Upload progress toast (AddFileButton) ─────────────────────────────── */
+.ics-upload-toast {
+  position: fixed;
+  bottom: 1.2rem;
+  right: 1.2rem;
+  z-index: 1090;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 260px;
+  max-width: 340px;
+}
+.ics-upload-item {
+  background: var(--ics-card);
+  border: 1px solid var(--ics-border);
+  border-radius: var(--ics-radius);
+  box-shadow: var(--ics-shadow-md);
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  animation: slideUp 0.22s ease-out;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── AI Modal pulsing spinner ──────────────────────────────────────────── */
+.ics-ai-pulse {
+  animation: aiPulse 1.6s ease-in-out infinite;
+}
+@keyframes aiPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+/* ── Auth card ─────────────────────────────────────────────────────────── */
+.ics-auth-card {
+  border: none !important;
+  border-radius: var(--ics-radius) !important;
+  box-shadow: var(--ics-shadow-md) !important;
+}
+.ics-auth-input {
+  border-radius: var(--ics-radius-sm) !important;
+  border: 1.5px solid var(--ics-border) !important;
+  font-size: 0.9rem !important;
+  transition: var(--ics-transition) !important;
+}
+.ics-auth-input:focus {
+  border-color: var(--ics-blue) !important;
+  box-shadow: 0 0 0 3px rgba(0,102,204,0.15) !important;
+}
+
+/* ── Context-menu item icon alignment ─────────────────────────────────── */
+.ics-menu-item { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; }
+.ics-menu-item svg { flex-shrink: 0; width: 14px; }
+
+/* ── Image thumbnail ───────────────────────────────────────────────────── */
+.ics-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 5px;
+  flex-shrink: 0;
+  border: 1px solid var(--ics-border);
+}
+
+/* ── Fade-in animation for grid items ─────────────────────────────────── */
+.ics-fade-in {
+  animation: fadeIn 0.25s ease-out both;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Scrollbar (Webkit) ────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c5d0de; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #a0b0c4; }
+
+/* ── Utility ───────────────────────────────────────────────────────────── */
+.text-ics-blue   { color: var(--ics-blue) !important; }
+.text-ics-muted  { color: var(--ics-text-muted) !important; }
+.bg-ics-pale     { background: var(--ics-blue-pale) !important; }

@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { useAuth } from "../../contexts/AuthContext"
 import { storage } from "../../firebase"
 import { v4 as uuidV4 } from "uuid"
-import { ProgressBar, Toast } from "react-bootstrap"
+import { ProgressBar } from "react-bootstrap"
 
 export default function AddFileButton({ currentFolder }) {
   const [uploadingFiles, setUploadingFiles] = useState([])
@@ -78,44 +78,39 @@ export default function AddFileButton({ currentFolder }) {
       </label>
       {uploadingFiles.length > 0 &&
         ReactDOM.createPortal(
-          <div
-            style={{
-              position: "absolute",
-              bottom: "1rem",
-              right: "1rem",
-              maxWidth: "250px",
-            }}
-          >
+          <div className="ics-upload-toast">
             {uploadingFiles.map(file => (
-              <Toast
-                key={file.id}
-                onClose={() => {
-                  setUploadingFiles(prevUploadingFiles => {
-                    return prevUploadingFiles.filter(uploadFile => {
-                      return uploadFile.id !== file.id
-                    })
-                  })
-                }}
-              >
-                <Toast.Header
-                  closeButton={file.error}
-                  className="text-truncate w-100 d-block"
-                >
-                  {file.name}
-                </Toast.Header>
-                <Toast.Body>
-                  <ProgressBar
-                    animated={!file.error}
-                    variant={file.error ? "danger" : "primary"}
-                    now={file.error ? 100 : file.progress * 100}
-                    label={
-                      file.error
-                        ? "Error"
-                        : `${Math.round(file.progress * 100)}%`
-                    }
-                  />
-                </Toast.Body>
-              </Toast>
+              <div key={file.id} className="ics-upload-item">
+                <div className="d-flex align-items-center justify-content-between mb-1" style={{ gap: "6px" }}>
+                  <span
+                    className="text-truncate"
+                    style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1c2b3a", maxWidth: "200px" }}
+                  >
+                    {file.name}
+                  </span>
+                  {file.error && (
+                    <button
+                      className="btn btn-link p-0"
+                      style={{ fontSize: "0.75rem", color: "#E53935", lineHeight: 1 }}
+                      onClick={() =>
+                        setUploadingFiles(prev => prev.filter(f => f.id !== file.id))
+                      }
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
+                <ProgressBar
+                  animated={!file.error}
+                  variant={file.error ? "danger" : "primary"}
+                  now={file.error ? 100 : file.progress * 100}
+                  label={file.error ? "Error" : `${Math.round(file.progress * 100)}%`}
+                  style={{ height: "6px", borderRadius: "99px" }}
+                />
+                {file.error && (
+                  <span style={{ fontSize: "0.72rem", color: "#E53935", marginTop: 2 }}>Upload failed</span>
+                )}
+              </div>
             ))}
           </div>,
           document.body

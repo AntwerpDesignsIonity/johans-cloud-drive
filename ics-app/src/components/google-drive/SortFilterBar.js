@@ -75,26 +75,39 @@ export default function SortFilterBar({ sort, setSort, showFavOnly, setShowFavOn
   return (
     <div
       className="d-flex align-items-center flex-wrap"
-      style={{ gap: "8px", padding: "6px 0" }}
+      style={{
+        gap: "7px",
+        padding: "6px 10px",
+        background: "#fff",
+        borderRadius: "8px",
+        border: "1px solid #dde4ee",
+        boxShadow: "0 1px 4px rgba(0,51,102,0.06)",
+      }}
     >
+      <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#9aa", textTransform: "uppercase", letterSpacing: "0.07em", marginRight: 2 }}>
+        Sort
+      </span>
       <DropdownButton
         variant="outline-secondary"
         size="sm"
         id="sort-dropdown"
+        className="ics-pill"
         title={
-          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <FontAwesomeIcon icon={sortIcon(sort)} />
+          <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+            <FontAwesomeIcon icon={sortIcon(sort)} style={{ fontSize: "0.75rem" }} />
             {SORT_LABELS[sort] || "Sort"}
           </span>
         }
+        style={{ borderRadius: "99px" }}
       >
         {Object.entries(SORT_LABELS).map(([value, label]) => (
           <Dropdown.Item
             key={value}
             active={sort === value}
             onClick={() => setSort(value)}
-            style={{ fontSize: "0.85rem" }}
+            style={{ fontSize: "0.83rem", display: "flex", alignItems: "center", gap: "7px" }}
           >
+            <FontAwesomeIcon icon={sortIcon(value)} style={{ width: 13, opacity: 0.6 }} />
             {label}
           </Dropdown.Item>
         ))}
@@ -105,10 +118,11 @@ export default function SortFilterBar({ sort, setSort, showFavOnly, setShowFavOn
         size="sm"
         onClick={() => setShowFavOnly(prev => !prev)}
         title={showFavOnly ? "Show all files" : "Show favorites only"}
+        className="ics-pill"
         style={{ display: "flex", alignItems: "center", gap: "5px" }}
       >
-        <FontAwesomeIcon icon={faStar} />
-        <span>{showFavOnly ? "All Files" : "Favorites Only"}</span>
+        <FontAwesomeIcon icon={faStar} style={{ fontSize: "0.72rem" }} />
+        <span>{showFavOnly ? "All Files" : "Starred"}</span>
       </Button>
     </div>
   )
