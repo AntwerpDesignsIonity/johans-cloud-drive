@@ -15,8 +15,8 @@ import { faStar, faFolder as faFolderEmpty } from "@fortawesome/free-solid-svg-i
 
 export default function Dashboard() {
   const { folderId } = useParams()
-  const { state = {} } = useLocation()
-  const { folder, childFolders, childFiles } = useFolder(folderId, state.folder)
+  useLocation() // keep for future use
+  const { folder, childFolders, childFiles } = useFolder(folderId)
 
   const [sort, setSort] = useState(SORT_OPTIONS.NAME_ASC)
   const [showFavOnly, setShowFavOnly] = useState(false)

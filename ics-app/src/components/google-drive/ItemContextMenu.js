@@ -17,12 +17,14 @@ import {
   faDownload,
 } from "@fortawesome/free-solid-svg-icons"
 import { storage } from "../../firebase"
+import { useAuth } from "../../contexts/AuthContext"
 import { summarizeFile, ocrFile } from "../../services/gemini"
 import AiResultModal from "./AiResultModal"
 import MoveItemModal from "./MoveItemModal"
 import RenameModal from "./RenameModal"
 
 export default function ItemContextMenu({ item, itemType }) {
+  const { currentUser } = useAuth()
   const [showMove, setShowMove] = useState(false)
   const [moveAction, setMoveAction] = useState("move")
   const [showRename, setShowRename] = useState(false)
@@ -45,11 +47,14 @@ export default function ItemContextMenu({ item, itemType }) {
     if (!window.confirm(`Delete "${item.name}"?\n\nThis action cannot be undone.`)) return
     try {
       if (itemType === "file") {
+        // item.id is the full storage path (files/uid/...)
         await storage.ref(item.id).delete()
       } else {
-        await deleteStorageFolderRecursive(storage.ref(item.id))
+        // item.storagePath is relative; prepend the user-scoped root
+        const folderRef = storage.ref(`files/${currentUser.uid}/${item.storagePath}`)
+        await deleteStorageFolderRecursive(folderRef)
       }
-      window.location.reload()
+      window.dispatchEvent(new Event("ics-storage-updated"))
     } catch (err) {
       alert("Delete failed: " + err.message)
     }
