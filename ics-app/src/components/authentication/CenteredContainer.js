@@ -51,24 +51,6 @@ export default function CenteredContainer({ children }) {
             }}
             className="d-none d-md-flex"
           >
-            <img
-              src={process.env.PUBLIC_URL + "/assets/ionity-logo-edited.png"}
-              alt="Ionity Logo"
-              style={{ width: "140px", objectFit: "contain", filter: "brightness(1.15)" }}
-            />
-            <img
-              src={
-                process.env.PUBLIC_URL +
-                "/assets/logo-dark-ionity-antwerp-designs-johan-wilhelm-van-antwerp-south-africa.png"
-              }
-              alt="Antwerp Designs Ionity"
-              style={{ width: "120px", objectFit: "contain", filter: "brightness(1.1)" }}
-            />
-            <img
-              src={process.env.PUBLIC_URL + "/assets/AEDI-LOGo.jpeg"}
-              alt="AEDI Logo"
-              style={{ width: "80px", borderRadius: "8px", objectFit: "contain" }}
-            />
             <p
               style={{
                 color: "#b0c8e8",

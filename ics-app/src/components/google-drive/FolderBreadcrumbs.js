@@ -4,13 +4,13 @@ import { Link } from "react-router-dom"
 import { ROOT_FOLDER } from "../../hooks/useFolder"
 
 function folderLink(folder) {
-  if (!folder.storagePath) return "/"
-  return `/folder/${btoa(folder.storagePath)}`
+  if (!folder || folder === ROOT_FOLDER || folder.id == null) return "/"
+  return `/folder/${folder.id}`
 }
 
 export default function FolderBreadcrumbs({ currentFolder }) {
-  const isRoot = !currentFolder || currentFolder === ROOT_FOLDER || !currentFolder.storagePath
-  let path = isRoot ? [] : [ROOT_FOLDER, ...(currentFolder.path || [])]
+  const isRoot = !currentFolder || currentFolder === ROOT_FOLDER || !currentFolder.id
+  const path = isRoot ? [] : [ROOT_FOLDER, ...(currentFolder.path || [])]
 
   return (
     <Breadcrumb
@@ -19,7 +19,7 @@ export default function FolderBreadcrumbs({ currentFolder }) {
     >
       {path.map(folder => (
         <Breadcrumb.Item
-          key={folder.storagePath !== undefined ? folder.storagePath : "root"}
+          key={folder.id != null ? folder.id : "root"}
           linkAs={Link}
           linkProps={{ to: folderLink(folder) }}
           className="text-truncate d-inline-block"
