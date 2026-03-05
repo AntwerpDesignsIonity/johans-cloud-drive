@@ -149,3 +149,140 @@ export async function ocrFile(fileUrl, fileName) {
 
   return callGemini(parts)
 }
+
+/**
+ * Suggest tags/keywords for a file using Gemini AI.
+ * Returns a comma-separated string of lowercase tags.
+ */
+export async function suggestTags(fileUrl, fileName) {
+  const ext = (fileName.split(".").pop() || "").toLowerCase()
+  let parts = []
+
+  if (IMAGE_EXTS.includes(ext)) {
+    try {
+      const { base64, mimeType } = await urlToBase64(fileUrl)
+      parts = [
+        {
+          text: `Analyze this image named "${fileName}" and produce 6–10 concise relevant tags. Return ONLY a comma-separated list of lowercase tags with no explanations, no numbering, no extra text. Example: nature, sunset, landscape, photography, outdoor`,
+        },
+        { inline_data: { mime_type: mimeType, data: base64 } },
+      ]
+    } catch {
+      parts = [{ text: `Generate 6–10 relevant tags for a file named "${fileName}". Return ONLY a comma-separated list of lowercase tags.` }]
+    }
+  } else if (TEXT_EXTS.includes(ext)) {
+    try {
+      const resp = await fetch(fileUrl)
+      const text = await resp.text()
+      const truncated = text.substring(0, 4000)
+      parts = [
+        {
+          text: `Generate 6–10 relevant tags for the file "${fileName}" based on its content:\n\n${truncated}\n\nReturn ONLY a comma-separated list of lowercase tags, no explanations.`,
+        },
+      ]
+    } catch {
+      parts = [{ text: `Generate 6–10 relevant tags for a file named "${fileName}". Return ONLY a comma-separated list of lowercase tags.` }]
+    }
+  } else if (PDF_EXTS.includes(ext)) {
+    try {
+      const { base64, mimeType } = await urlToBase64(fileUrl)
+      parts = [
+        {
+          text: `Analyze this PDF named "${fileName}" and produce 6–10 concise topic tags. Return ONLY a comma-separated list of lowercase tags, no explanations.`,
+        },
+        { inline_data: { mime_type: mimeType || "application/pdf", data: base64 } },
+      ]
+    } catch {
+      parts = [{ text: `Generate 6–10 relevant tags for a PDF file named "${fileName}". Return ONLY a comma-separated list of lowercase tags.` }]
+    }
+  } else {
+    parts = [
+      {
+        text: `Generate 6–10 relevant tags for a file named "${fileName}" (${ext.toUpperCase()} format). Return ONLY a comma-separated list of lowercase tags, no explanations, no numbering.`,
+      },
+    ]
+  }
+
+  return callGemini(parts)
+}
+
+/**
+ * Suggest 3 cleaner, more descriptive filenames based on file content and name.
+ */
+export async function suggestRename(fileUrl, fileName) {
+  const ext = (fileName.split(".").pop() || "").toLowerCase()
+  let contentHint = ""
+
+  if (TEXT_EXTS.includes(ext)) {
+    try {
+      const resp = await fetch(fileUrl)
+      const text = await resp.text()
+      contentHint = `\n\nContent preview:\n${text.substring(0, 2000)}`
+    } catch {}
+  }
+
+  const parts = [
+    {
+      text: `The current filename is "${fileName}".${contentHint}\n\nSuggest exactly 3 clean, descriptive alternative filenames (keeping the same ".${ext}" extension).\nRules: use-kebab-case, be descriptive, no special characters except hyphens, all lowercase.\nReturn ONLY a numbered list of 3 filenames, one per line, nothing else.\nExample:\n1. descriptive-topic-name.${ext}\n2. project-document-v2.${ext}\n3. clear-subject-title.${ext}`,
+    },
+  ]
+
+  return callGemini(parts)
+}
+
+/**
+ * Answer a custom user question about a file using Gemini AI.
+ */
+export async function askAboutFile(fileUrl, fileName, question) {
+  const ext = (fileName.split(".").pop() || "").toLowerCase()
+  let parts = []
+
+  if (IMAGE_EXTS.includes(ext)) {
+    try {
+      const { base64, mimeType } = await urlToBase64(fileUrl)
+      parts = [
+        {
+          text: `File: "${fileName}"\nQuestion: ${question}\n\nPlease answer based on the image content. Be concise and accurate.`,
+        },
+        { inline_data: { mime_type: mimeType, data: base64 } },
+      ]
+    } catch {
+      parts = [{ text: `Regarding an image file named "${fileName}": ${question}` }]
+    }
+  } else if ([...TEXT_EXTS, ...PDF_EXTS].includes(ext)) {
+    try {
+      const resp = await fetch(fileUrl)
+      const text = await resp.text()
+      const truncated = text.substring(0, 6000)
+      parts = [
+        {
+          text: `File: "${fileName}"\n\nContent:\n${truncated}\n\n---\nQuestion: ${question}\n\nAnswer based strictly on the file content above.`,
+        },
+      ]
+    } catch {
+      parts = [{ text: `Regarding a file named "${fileName}" (${ext.toUpperCase()}): ${question}` }]
+    }
+  } else {
+    parts = [
+      {
+        text: `Regarding a file named "${fileName}" (${ext.toUpperCase()} format): ${question}. Provide a helpful answer based on what this type of file typically contains.`,
+      },
+    ]
+  }
+
+  return callGemini(parts)
+}
+
+/**
+ * Generate a smart description for a folder based on its name and child item names.
+ */
+export async function summarizeFolder(folderName, childNames) {
+  const sample = childNames.slice(0, 30).join(", ")
+  const total = childNames.length
+  const parts = [
+    {
+      text: `A cloud storage folder named "${folderName}" contains ${total} item(s)${total > 0 ? `: ${sample}${total > 30 ? ", …" : ""}` : ""}.\n\nIn 2-3 sentences, describe what this folder likely contains and its purpose, based on the folder name and the file names listed. Be concise and practical.`,
+    },
+  ]
+  return callGemini(parts)
+}

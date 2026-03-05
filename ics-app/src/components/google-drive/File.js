@@ -40,7 +40,20 @@ function getFileTypeInfo(fileName) {
 const IMAGE_EXTS = ["jpg","jpeg","png","gif","webp","bmp","svg"]
 function isImage(name) { return IMAGE_EXTS.includes((name.split(".").pop()||"").toLowerCase()) }
 
-export default function File({ file }) {
+function formatSize(bytes) {
+  if (!bytes) return ""
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1048576).toFixed(1)} MB`
+}
+
+function formatDate(ts) {
+  if (!ts) return ""
+  const d = new Date(ts.toMillis ? ts.toMillis() : ts)
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+}
+
+export default function File({ file, listView }) {
   const { icon, color } = getFileTypeInfo(file.name)
   const { currentUser } = useAuth()
   const [imgErr, setImgErr] = useState(false)
@@ -50,6 +63,68 @@ export default function File({ file }) {
     e.preventDefault()
     e.stopPropagation()
     toggleFavorite(currentUser.uid, file.storagePath)
+  }
+
+  const iconBlock = showThumb ? (
+    <img src={file.url} alt="" className="ics-thumb" onError={() => setImgErr(true)} />
+  ) : (
+    <span
+      style={{
+        width: listView ? 30 : 28,
+        height: listView ? 30 : 28,
+        borderRadius: 6,
+        background: `${color}18`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <FontAwesomeIcon icon={icon} style={{ color, fontSize: "0.83rem" }} />
+    </span>
+  )
+
+  if (listView) {
+    return (
+      <div
+        className="ics-item-card ics-fade-in d-flex align-items-center px-2"
+        style={{ minWidth: 0, gap: "6px", height: "44px" }}
+      >
+        <a
+          href={file.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="d-flex align-items-center text-dark text-decoration-none"
+          style={{ minWidth: 0, gap: "9px", padding: "0 2px", flex: "1 1 0" }}
+          title={file.name}
+        >
+          {iconBlock}
+          <span className="text-truncate" style={{ fontSize: "0.83rem", fontWeight: 500, lineHeight: 1.3, flex: "1 1 0" }}>
+            {file.name}
+          </span>
+        </a>
+        {/* Meta: size + date – visible on wider screens */}
+        <span className="d-none d-md-flex" style={{ gap: "16px", alignItems: "center", flexShrink: 0 }}>
+          {file.size ? (
+            <span style={{ fontSize: "0.74rem", color: "#9aab", minWidth: "56px", textAlign: "right" }}>
+              {formatSize(file.size)}
+            </span>
+          ) : null}
+          {file.createdAt ? (
+            <span style={{ fontSize: "0.74rem", color: "#9aab", minWidth: "90px" }}>
+              {formatDate(file.createdAt)}
+            </span>
+          ) : null}
+        </span>
+        <button
+          onClick={handleFavToggle}
+          className="btn btn-link p-0"
+          style={{ color: file.favorite ? "#f5c518" : "#d0d8e4", lineHeight: 1, flexShrink: 0, fontSize: "0.75rem", transition: "color 0.15s" }}
+          title={file.favorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          <FontAwesomeIcon icon={faStar} />
+        </button>
+        <ItemContextMenu item={file} itemType="file" />
+      </div>
+    )
   }
 
   return (
@@ -66,26 +141,7 @@ export default function File({ file }) {
         style={{ minWidth: 0, gap: "9px", padding: "0 2px" }}
         title={file.name}
       >
-        {showThumb ? (
-          <img
-            src={file.url}
-            alt=""
-            className="ics-thumb"
-            onError={() => setImgErr(true)}
-          />
-        ) : (
-          <span
-            style={{
-              width: 28, height: 28,
-              borderRadius: 6,
-              background: `${color}18`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <FontAwesomeIcon icon={icon} style={{ color, fontSize: "0.82rem" }} />
-          </span>
-        )}
+        {iconBlock}
         <span className="text-truncate" style={{ fontSize: "0.83rem", fontWeight: 500, lineHeight: 1.3 }}>
           {file.name}
         </span>

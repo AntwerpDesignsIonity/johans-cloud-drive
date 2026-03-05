@@ -1,9 +1,9 @@
 /**
  * ItemContextMenu – the "⋮" three-dot dropdown menu for files and folders.
- * Features: Favorite toggle, Rename, Move, Copy, AI Summary, OCR, Delete, Open, Download.
+ * Features: Favorite, Rename, Move, Copy, AI Summary, OCR, Smart Tags, Smart Rename, Ask AI, Folder AI, Delete, Open, Download.
  */
-import React, { useState } from "react"
-import { Dropdown } from "react-bootstrap"
+import React, { useState, useRef } from "react"
+import { Dropdown, Modal, Button, Form } from "react-bootstrap"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
   faEllipsisV,
@@ -16,27 +16,33 @@ import {
   faSearchPlus,
   faExternalLinkAlt,
   faDownload,
+  faTags,
+  faSignature,
+  faCommentDots,
+  faPaperPlane,
 } from "@fortawesome/free-solid-svg-icons"
 import { storage } from "../../firebase"
 import { useAuth } from "../../contexts/AuthContext"
 import { toggleFavorite } from "../../hooks/useFolder"
-import { summarizeFile, ocrFile } from "../../services/gemini"
+import { summarizeFile, ocrFile, suggestTags, suggestRename, askAboutFile, summarizeFolder } from "../../services/gemini"
 import AiResultModal from "./AiResultModal"
 import MoveItemModal from "./MoveItemModal"
 import RenameModal from "./RenameModal"
 
-export default function ItemContextMenu({ item, itemType }) {
+export default function ItemContextMenu({ item, itemType, childNames }) {
   const { currentUser } = useAuth()
   const [showMove, setShowMove] = useState(false)
   const [moveAction, setMoveAction] = useState("move")
   const [showRename, setShowRename] = useState(false)
+
+  // AI result modal state
   const [aiModal, setAiModal] = useState({
-    show: false,
-    title: "",
-    loading: false,
-    result: null,
-    error: null,
+    show: false, title: "", loading: false, result: null, error: null, mode: "summary",
   })
+
+  // Ask AI – dedicated question input modal
+  const [askModal, setAskModal] = useState({ show: false, question: "" })
+  const askInputRef = useRef(null)
 
   async function deleteStorageFolderRecursive(folderRef) {
     const { items, prefixes } = await folderRef.listAll()
@@ -49,10 +55,8 @@ export default function ItemContextMenu({ item, itemType }) {
     if (!window.confirm(`Delete "${item.name}"?\n\nThis action cannot be undone.`)) return
     try {
       if (itemType === "file") {
-        // item.id is the full storage path (files/uid/...)
         await storage.ref(item.id).delete()
       } else {
-        // item.storagePath is relative; prepend the user-scoped root
         const folderRef = storage.ref(`files/${currentUser.uid}/${item.storagePath}`)
         await deleteStorageFolderRecursive(folderRef)
       }
@@ -67,20 +71,39 @@ export default function ItemContextMenu({ item, itemType }) {
     setShowMove(true)
   }
 
-  async function doAiAction(mode) {
-    const titlePrefix = mode === "ocr" ? "OCR Extract" : "AI Summary"
-    setAiModal({
-      show: true,
-      title: `${titlePrefix} — ${item.name}`,
-      loading: true,
-      result: null,
-      error: null,
-    })
+  /** Run an AI action and populate the result modal. */
+  async function doAiAction(mode, extra) {
+    const TITLES = {
+      summary:  `AI Summary — ${item.name}`,
+      ocr:      `OCR Extract — ${item.name}`,
+      tags:     `Smart Tags — ${item.name}`,
+      rename:   `Rename Suggestions — ${item.name}`,
+      ask:      `Ask AI — ${item.name}`,
+      folder:   `Folder Overview — ${item.name}`,
+    }
+    setAiModal({ show: true, title: TITLES[mode] || `AI — ${item.name}`, loading: true, result: null, error: null, mode })
     try {
-      const result =
-        mode === "ocr"
-          ? await ocrFile(item.url, item.name)
-          : await summarizeFile(item.url, item.name)
+      let result
+      switch (mode) {
+        case "summary": result = await summarizeFile(item.url, item.name); break
+        case "ocr":     result = await ocrFile(item.url, item.name); break
+        case "tags":    result = await suggestTags(item.url, item.name); break
+        case "rename":  result = await suggestRename(item.url, item.name); break
+        case "ask":     result = await askAboutFile(item.url, item.name, extra); break
+        case "folder":  result = await summarizeFolder(item.name, childNames || []); break
+        default:        result = await summarizeFile(item.url, item.name)
+      }
+      setAiModal(prev => ({ ...prev, loading: false, result }))
+    } catch (err) {
+      setAiModal(prev => ({ ...prev, loading: false, error: err.message }))
+    }
+  }
+
+  /** Handle follow-up question from AiResultModal */
+  async function handleFollowUp(question) {
+    setAiModal(prev => ({ ...prev, loading: true, result: null, error: null, mode: "ask", title: `Ask AI — ${item.name}` }))
+    try {
+      const result = await askAboutFile(item.url, item.name, question)
       setAiModal(prev => ({ ...prev, loading: false, result }))
     } catch (err) {
       setAiModal(prev => ({ ...prev, loading: false, error: err.message }))
@@ -109,7 +132,7 @@ export default function ItemContextMenu({ item, itemType }) {
           alignRight
           style={{
             fontSize: "0.84rem",
-            minWidth: "185px",
+            minWidth: "195px",
             borderRadius: "10px",
             border: "1.5px solid #dde4ee",
             boxShadow: "0 6px 24px rgba(0,51,102,0.13)",
@@ -142,13 +165,10 @@ export default function ItemContextMenu({ item, itemType }) {
 
           {/* ─── Universal actions ─── */}
           <Dropdown.Item
-            onClick={e => { e.stopPropagation(); toggleFavorite(currentUser.uid, item.storagePath); window.dispatchEvent(new Event('ics-storage-updated')) }}
+            onClick={e => { e.stopPropagation(); toggleFavorite(currentUser.uid, item.storagePath); window.dispatchEvent(new Event("ics-storage-updated")) }}
             style={{ display: "flex", alignItems: "center", gap: "8px" }}
           >
-            <FontAwesomeIcon
-              icon={faStar}
-              style={{ color: item.favorite ? "#f5c518" : "#bbb", width: 14 }}
-            />
+            <FontAwesomeIcon icon={faStar} style={{ color: item.favorite ? "#f5c518" : "#bbb", width: 14 }} />
             {item.favorite ? "Remove Favorite" : "Add to Favorites"}
           </Dropdown.Item>
 
@@ -180,16 +200,8 @@ export default function ItemContextMenu({ item, itemType }) {
           {itemType === "file" && (
             <>
               <Dropdown.Divider />
-              <div
-                style={{
-                  padding: "2px 12px 4px",
-                  fontSize: "0.7rem",
-                  color: "#999",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                Gemini AI
+              <div style={{ padding: "2px 12px 4px", fontSize: "0.68rem", color: "#7eb8f7", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>
+                ✦ Gemini AI
               </div>
               <Dropdown.Item
                 onClick={e => { e.stopPropagation(); doAiAction("summary") }}
@@ -198,6 +210,162 @@ export default function ItemContextMenu({ item, itemType }) {
                 <FontAwesomeIcon icon={faRobot} style={{ color: "#4A90E2", width: 14 }} />
                 AI Summary
               </Dropdown.Item>
+              <Dropdown.Item
+                onClick={e => { e.stopPropagation(); doAiAction("ocr") }}
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <FontAwesomeIcon icon={faSearchPlus} style={{ color: "#4A90E2", width: 14 }} />
+                OCR — Extract Text
+              </Dropdown.Item>
+              <Dropdown.Item
+                onClick={e => { e.stopPropagation(); doAiAction("tags") }}
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <FontAwesomeIcon icon={faTags} style={{ color: "#9B59B6", width: 14 }} />
+                Suggest Tags
+              </Dropdown.Item>
+              <Dropdown.Item
+                onClick={e => { e.stopPropagation(); doAiAction("rename") }}
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <FontAwesomeIcon icon={faSignature} style={{ color: "#E67E22", width: 14 }} />
+                Smart Rename
+              </Dropdown.Item>
+              <Dropdown.Item
+                onClick={e => { e.stopPropagation(); setAskModal({ show: true, question: "" }) }}
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <FontAwesomeIcon icon={faCommentDots} style={{ color: "#2ECC71", width: 14 }} />
+                Ask AI…
+              </Dropdown.Item>
+            </>
+          )}
+
+          {/* ─── AI folder overview ─── */}
+          {itemType === "folder" && (
+            <>
+              <Dropdown.Divider />
+              <div style={{ padding: "2px 12px 4px", fontSize: "0.68rem", color: "#7eb8f7", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>
+                ✦ Gemini AI
+              </div>
+              <Dropdown.Item
+                onClick={e => { e.stopPropagation(); doAiAction("folder") }}
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <FontAwesomeIcon icon={faRobot} style={{ color: "#4A90E2", width: 14 }} />
+                Folder Overview
+              </Dropdown.Item>
+            </>
+          )}
+
+          {/* ─── Delete ─── */}
+          <Dropdown.Divider />
+          <Dropdown.Item
+            onClick={handleDelete}
+            className="text-danger"
+            style={{ display: "flex", alignItems: "center", gap: "8px" }}
+          >
+            <FontAwesomeIcon icon={faTrashAlt} style={{ width: 14 }} />
+            Delete
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown>
+
+      {/* ─── Ask AI question input modal ─── */}
+      <Modal
+        show={askModal.show}
+        onHide={() => setAskModal({ show: false, question: "" })}
+        centered
+        size="md"
+        onClick={e => e.stopPropagation()}
+      >
+        <Modal.Header
+          closeButton
+          style={{
+            background: "linear-gradient(90deg, #002244 0%, #003d80 100%)",
+            color: "#fff",
+            borderBottom: "2px solid #0066cc",
+          }}
+        >
+          <Modal.Title style={{ fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "8px" }}>
+            <FontAwesomeIcon icon={faCommentDots} style={{ color: "#7eb8f7" }} />
+            Ask AI about <em style={{ fontStyle: "normal", marginLeft: 4 }}>{item.name}</em>
+          </Modal.Title>
+        </Modal.Header>
+        <Form
+          onSubmit={e => {
+            e.preventDefault()
+            if (!askModal.question.trim()) return
+            const q = askModal.question.trim()
+            setAskModal({ show: false, question: "" })
+            doAiAction("ask", q)
+          }}
+        >
+          <Modal.Body style={{ padding: "1.25rem" }}>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              ref={askInputRef}
+              placeholder="e.g. What is the main topic? Does it mention a date? What language is this in?"
+              value={askModal.question}
+              onChange={e => setAskModal(prev => ({ ...prev, question: e.target.value }))}
+              autoFocus
+              style={{ fontSize: "0.88rem", resize: "none", borderColor: "#dde4ee" }}
+            />
+          </Modal.Body>
+          <Modal.Footer style={{ padding: "8px 1.25rem" }}>
+            <Button variant="secondary" size="sm" onClick={() => setAskModal({ show: false, question: "" })}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              type="submit"
+              disabled={!askModal.question.trim()}
+              style={{ display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              <FontAwesomeIcon icon={faPaperPlane} style={{ fontSize: "0.72rem" }} />
+              Ask Gemini
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* ─── AI result modal ─── */}
+      <AiResultModal
+        show={aiModal.show}
+        onHide={() => setAiModal(prev => ({ ...prev, show: false }))}
+        title={aiModal.title}
+        result={aiModal.result}
+        error={aiModal.error}
+        loading={aiModal.loading}
+        mode={aiModal.mode}
+        onFollowUp={itemType === "file" ? handleFollowUp : undefined}
+      />
+
+      {/* ─── Move / Copy modal ─── */}
+      {showMove && (
+        <MoveItemModal
+          show={showMove}
+          onHide={() => setShowMove(false)}
+          item={item}
+          itemType={itemType}
+          action={moveAction}
+        />
+      )}
+
+      {/* ─── Rename modal ─── */}
+      {showRename && (
+        <RenameModal
+          show={showRename}
+          onHide={() => setShowRename(false)}
+          item={item}
+          itemType={itemType}
+        />
+      )}
+    </>
+  )
+}
               <Dropdown.Item
                 onClick={e => { e.stopPropagation(); doAiAction("ocr") }}
                 style={{ display: "flex", alignItems: "center", gap: "8px" }}

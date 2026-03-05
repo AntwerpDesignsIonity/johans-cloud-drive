@@ -1,11 +1,16 @@
 import React from "react"
-import { Button, DropdownButton, Dropdown } from "react-bootstrap"
+import { Button, DropdownButton, Dropdown, Form, InputGroup } from "react-bootstrap"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
   faSortAlphaDown,
   faStar,
   faCalendarAlt,
   faLayerGroup,
+  faSearch,
+  faThLarge,
+  faList,
+  faWeightHanging,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons"
 
 export const SORT_OPTIONS = {
@@ -15,21 +20,26 @@ export const SORT_OPTIONS = {
   DATE_OLD: "date_old",
   TYPE: "type",
   FAV_FIRST: "fav_first",
+  SIZE_BIG: "size_big",
+  SIZE_SMALL: "size_small",
 }
 
 const SORT_LABELS = {
   [SORT_OPTIONS.NAME_ASC]: "Name (A–Z)",
   [SORT_OPTIONS.NAME_DESC]: "Name (Z–A)",
-  [SORT_OPTIONS.DATE_NEW]: "Date Added (Newest)",
-  [SORT_OPTIONS.DATE_OLD]: "Date Added (Oldest)",
+  [SORT_OPTIONS.DATE_NEW]: "Date (Newest)",
+  [SORT_OPTIONS.DATE_OLD]: "Date (Oldest)",
   [SORT_OPTIONS.TYPE]: "File Type",
   [SORT_OPTIONS.FAV_FIRST]: "Favorites First",
+  [SORT_OPTIONS.SIZE_BIG]: "Size (Largest)",
+  [SORT_OPTIONS.SIZE_SMALL]: "Size (Smallest)",
 }
 
 function sortIcon(sort) {
   if (sort === SORT_OPTIONS.DATE_NEW || sort === SORT_OPTIONS.DATE_OLD) return faCalendarAlt
   if (sort === SORT_OPTIONS.TYPE) return faLayerGroup
   if (sort === SORT_OPTIONS.FAV_FIRST) return faStar
+  if (sort === SORT_OPTIONS.SIZE_BIG || sort === SORT_OPTIONS.SIZE_SMALL) return faWeightHanging
   return faSortAlphaDown
 }
 
@@ -66,25 +76,87 @@ export function sortItems(items, sort) {
         if (!a.favorite && b.favorite) return 1
         return (a.name || "").localeCompare(b.name || "")
       })
+    case SORT_OPTIONS.SIZE_BIG:
+      return arr.sort((a, b) => (b.size || 0) - (a.size || 0))
+    case SORT_OPTIONS.SIZE_SMALL:
+      return arr.sort((a, b) => (a.size || 0) - (b.size || 0))
     default:
       return arr
   }
 }
 
-export default function SortFilterBar({ sort, setSort, showFavOnly, setShowFavOnly }) {
+const DIVIDER_STYLE = { width: 1, height: 20, background: "#dde4ee", flexShrink: 0 }
+
+export default function SortFilterBar({
+  sort, setSort,
+  showFavOnly, setShowFavOnly,
+  search, setSearch,
+  viewMode, setViewMode,
+}) {
   return (
     <div
       className="d-flex align-items-center flex-wrap"
       style={{
         gap: "7px",
-        padding: "6px 10px",
+        padding: "7px 11px",
         background: "#fff",
-        borderRadius: "8px",
+        borderRadius: "10px",
         border: "1px solid #dde4ee",
-        boxShadow: "0 1px 4px rgba(0,51,102,0.06)",
+        boxShadow: "0 1px 6px rgba(0,51,102,0.07)",
       }}
     >
-      <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#9aa", textTransform: "uppercase", letterSpacing: "0.07em", marginRight: 2 }}>
+      {/* ── Search input ───────────────────────────────────────────── */}
+      <InputGroup size="sm" style={{ width: "210px", flexShrink: 0 }}>
+        <InputGroup.Prepend>
+          <InputGroup.Text
+            style={{
+              background: "#f4f6fb",
+              border: "1px solid #dde4ee",
+              borderRight: "none",
+              padding: "0 8px",
+            }}
+          >
+            <FontAwesomeIcon icon={faSearch} style={{ fontSize: "0.68rem", color: "#9ab" }} />
+          </InputGroup.Text>
+        </InputGroup.Prepend>
+        <Form.Control
+          type="text"
+          placeholder="Search files & folders…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            border: "1px solid #dde4ee",
+            borderLeft: "none",
+            borderRight: search ? "none" : "1px solid #dde4ee",
+            fontSize: "0.8rem",
+            background: "#f4f6fb",
+          }}
+        />
+        {search && (
+          <InputGroup.Append>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setSearch("")}
+              style={{
+                fontSize: "0.68rem",
+                padding: "0 8px",
+                border: "1px solid #dde4ee",
+                background: "#f4f6fb",
+                color: "#888",
+              }}
+              title="Clear search"
+            >
+              <FontAwesomeIcon icon={faTimes} />
+            </Button>
+          </InputGroup.Append>
+        )}
+      </InputGroup>
+
+      <span style={DIVIDER_STYLE} />
+
+      {/* ── Sort label + dropdown ──────────────────────────────────── */}
+      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aab", textTransform: "uppercase", letterSpacing: "0.07em" }}>
         Sort
       </span>
       <DropdownButton
@@ -94,36 +166,70 @@ export default function SortFilterBar({ sort, setSort, showFavOnly, setShowFavOn
         className="ics-pill"
         title={
           <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-            <FontAwesomeIcon icon={sortIcon(sort)} style={{ fontSize: "0.75rem" }} />
+            <FontAwesomeIcon icon={sortIcon(sort)} style={{ fontSize: "0.72rem" }} />
             {SORT_LABELS[sort] || "Sort"}
           </span>
         }
-        style={{ borderRadius: "99px" }}
       >
         {Object.entries(SORT_LABELS).map(([value, label]) => (
           <Dropdown.Item
             key={value}
             active={sort === value}
             onClick={() => setSort(value)}
-            style={{ fontSize: "0.83rem", display: "flex", alignItems: "center", gap: "7px" }}
+            style={{ fontSize: "0.82rem", display: "flex", alignItems: "center", gap: "8px" }}
           >
-            <FontAwesomeIcon icon={sortIcon(value)} style={{ width: 13, opacity: 0.6 }} />
+            <FontAwesomeIcon icon={sortIcon(value)} style={{ width: 13, opacity: sort === value ? 1 : 0.55 }} />
             {label}
           </Dropdown.Item>
         ))}
       </DropdownButton>
 
+      {/* ── Starred toggle ─────────────────────────────────────────── */}
       <Button
         variant={showFavOnly ? "warning" : "outline-secondary"}
         size="sm"
         onClick={() => setShowFavOnly(prev => !prev)}
-        title={showFavOnly ? "Show all files" : "Show favorites only"}
+        title={showFavOnly ? "Show all items" : "Show starred only"}
         className="ics-pill"
         style={{ display: "flex", alignItems: "center", gap: "5px" }}
       >
-        <FontAwesomeIcon icon={faStar} style={{ fontSize: "0.72rem" }} />
-        <span>{showFavOnly ? "All Files" : "Starred"}</span>
+        <FontAwesomeIcon icon={faStar} style={{ fontSize: "0.7rem" }} />
+        <span>{showFavOnly ? "All" : "Starred"}</span>
       </Button>
+
+      <span style={DIVIDER_STYLE} />
+
+      {/* ── View mode ──────────────────────────────────────────────── */}
+      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aab", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+        View
+      </span>
+      <Button
+        variant={viewMode === "grid" ? "primary" : "outline-secondary"}
+        size="sm"
+        title="Grid view"
+        className="ics-pill"
+        onClick={() => setViewMode("grid")}
+        style={{ padding: "3px 9px" }}
+      >
+        <FontAwesomeIcon icon={faThLarge} style={{ fontSize: "0.72rem" }} />
+      </Button>
+      <Button
+        variant={viewMode === "list" ? "primary" : "outline-secondary"}
+        size="sm"
+        title="List view"
+        className="ics-pill"
+        onClick={() => setViewMode("list")}
+        style={{ padding: "3px 9px" }}
+      >
+        <FontAwesomeIcon icon={faList} style={{ fontSize: "0.72rem" }} />
+      </Button>
+
+      {/* ── Active search hint ─────────────────────────────────────── */}
+      {search && (
+        <span style={{ marginLeft: "auto", fontSize: "0.74rem", color: "#6b7d92", fontStyle: "italic" }}>
+          Searching "{search}"
+        </span>
+      )}
     </div>
   )
 }

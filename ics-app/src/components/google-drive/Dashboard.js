@@ -18,32 +18,47 @@ export default function Dashboard() {
   useLocation() // keep for future use
   const { folder, childFolders, childFiles } = useFolder(folderId)
 
-  const [sort, setSort] = useState(SORT_OPTIONS.NAME_ASC)
+  const [sort, setSort]               = useState(SORT_OPTIONS.NAME_ASC)
   const [showFavOnly, setShowFavOnly] = useState(false)
+  const [search, setSearch]           = useState("")
+  const [viewMode, setViewMode]       = useState("grid")
 
-  // Starred items for the quick-access section (shown only outside fav-only mode)
+  // helpers
+  const q = search.trim().toLowerCase()
+
+  // Starred items for the quick-access section (shown only outside fav-only / search mode)
   const favFolders = useMemo(() => childFolders.filter(f => f.favorite), [childFolders])
   const favFiles   = useMemo(() => childFiles.filter(f => f.favorite),   [childFiles])
-  const hasFavorites = !showFavOnly && (favFolders.length > 0 || favFiles.length > 0)
+  const hasFavorites = !showFavOnly && !q && (favFolders.length > 0 || favFiles.length > 0)
 
   // Sorted & optionally filtered item lists
   const sortedFolders = useMemo(() => {
-    const base = showFavOnly ? childFolders.filter(f => f.favorite) : childFolders
+    let base = showFavOnly ? childFolders.filter(f => f.favorite) : childFolders
+    if (q) base = base.filter(f => (f.name || "").toLowerCase().includes(q))
     return sortItems(base, sort)
-  }, [childFolders, sort, showFavOnly])
+  }, [childFolders, sort, showFavOnly, q])
 
   const sortedFiles = useMemo(() => {
-    const base = showFavOnly ? childFiles.filter(f => f.favorite) : childFiles
+    let base = showFavOnly ? childFiles.filter(f => f.favorite) : childFiles
+    if (q) base = base.filter(f => (f.name || "").toLowerCase().includes(q))
     return sortItems(base, sort)
-  }, [childFiles, sort, showFavOnly])
+  }, [childFiles, sort, showFavOnly, q])
 
   const isEmpty = sortedFolders.length === 0 && sortedFiles.length === 0
 
-  const GRID_STYLE = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
-    gap: "9px",
-  }
+  // Layout helpers
+  const isList = viewMode === "list"
+  const GRID_STYLE = isList
+    ? {
+        display: "grid",
+        gridTemplateColumns: "1fr",
+        gap: "4px",
+      }
+    : {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
+        gap: "9px",
+      }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6fb" }}>
@@ -69,13 +84,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── Sort / Filter bar ────────────────────────────────────────── */}
+        {/* ── Sort / Filter / Search / View bar ───────────────────────── */}
         <div className="mb-3">
           <SortFilterBar
             sort={sort}
             setSort={setSort}
             showFavOnly={showFavOnly}
             setShowFavOnly={setShowFavOnly}
+            search={search}
+            setSearch={setSearch}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
           />
         </div>
 
@@ -88,10 +107,10 @@ export default function Dashboard() {
             </p>
             <div style={GRID_STYLE}>
               {favFolders.map(f => (
-                <Folder key={f.id} folder={f} />
+                <Folder key={f.id} folder={f} listView={isList} />
               ))}
               {favFiles.map(f => (
-                <File key={f.id} file={f} />
+                <File key={f.id} file={f} listView={isList} />
               ))}
             </div>
             <hr style={{ border: "none", borderTop: "1px solid #dde4ee", margin: "1rem 0 0.75rem" }} />
@@ -101,10 +120,15 @@ export default function Dashboard() {
         {/* ── Folders ──────────────────────────────────────────────────── */}
         {sortedFolders.length > 0 && (
           <div className="mb-3">
-            <p className="ics-section-label">Folders</p>
+            <p className="ics-section-label">
+              Folders
+              <span style={{ marginLeft: 6, fontSize: "0.7rem", color: "#aab", fontWeight: 400 }}>
+                ({sortedFolders.length})
+              </span>
+            </p>
             <div style={GRID_STYLE}>
               {sortedFolders.map(f => (
-                <Folder key={f.id} folder={f} />
+                <Folder key={f.id} folder={f} listView={isList} />
               ))}
             </div>
           </div>
@@ -113,10 +137,15 @@ export default function Dashboard() {
         {/* ── Files ────────────────────────────────────────────────────── */}
         {sortedFiles.length > 0 && (
           <div className="mb-3">
-            <p className="ics-section-label">Files</p>
+            <p className="ics-section-label">
+              Files
+              <span style={{ marginLeft: 6, fontSize: "0.7rem", color: "#aab", fontWeight: 400 }}>
+                ({sortedFiles.length})
+              </span>
+            </p>
             <div style={GRID_STYLE}>
               {sortedFiles.map(f => (
-                <File key={f.id} file={f} />
+                <File key={f.id} file={f} listView={isList} />
               ))}
             </div>
           </div>
@@ -139,10 +168,16 @@ export default function Dashboard() {
               style={{ fontSize: "3.5rem", color: "#c5d0de", marginBottom: "1rem" }}
             />
             <p className="mb-1" style={{ fontSize: "0.95rem", fontWeight: 600, color: "#6b7d92" }}>
-              {showFavOnly ? "No starred items here" : "This folder is empty"}
+              {q
+                ? `No results for "${search}"`
+                : showFavOnly
+                ? "No starred items here"
+                : "This folder is empty"}
             </p>
             <p className="mb-0" style={{ fontSize: "0.82rem", color: "#a0b0c4" }}>
-              {showFavOnly
+              {q
+                ? "Try a different search term."
+                : showFavOnly
                 ? "Star files or folders to see them here."
                 : "Upload files or create a folder to get started."}
             </p>
