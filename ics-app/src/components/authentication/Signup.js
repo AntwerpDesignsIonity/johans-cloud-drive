@@ -3,6 +3,7 @@ import { Form, Button, Card, Alert } from "react-bootstrap"
 import { useAuth } from "../../contexts/AuthContext"
 import { Link, useHistory } from "react-router-dom"
 import CenteredContainer from "./CenteredContainer"
+import { formatFirebaseAuthError } from "../../services/firebaseAuthErrors"
 
 export default function Signup() {
   const emailRef = useRef()
@@ -25,8 +26,8 @@ export default function Signup() {
       setLoading(true)
       await signup(emailRef.current.value, passwordRef.current.value)
       history.push("/")
-    } catch {
-      setError("Failed to create an account")
+    } catch (error) {
+      setError(formatFirebaseAuthError(error, "Failed to create an account"))
     }
 
     setLoading(false)
@@ -57,7 +58,7 @@ export default function Signup() {
           </Form>
         </Card.Body>
       </Card>
-      <div className="w-100 text-center mt-2">
+      <div className="w-100 text-center mt-2 ics-auth-helper">
         Already have an account? <Link to="/login">Log In</Link>
       </div>
     </CenteredContainer>

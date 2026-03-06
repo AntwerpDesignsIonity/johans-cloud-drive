@@ -3,6 +3,7 @@ import { Form, Button, Card, Alert } from "react-bootstrap"
 import { useAuth } from "../../contexts/AuthContext"
 import { Link } from "react-router-dom"
 import CenteredContainer from "./CenteredContainer"
+import { formatFirebaseAuthError } from "../../services/firebaseAuthErrors"
 
 export default function ForgotPassword() {
   const emailRef = useRef()
@@ -20,8 +21,8 @@ export default function ForgotPassword() {
       setLoading(true)
       await resetPassword(emailRef.current.value)
       setMessage("Check your inbox for further instructions")
-    } catch {
-      setError("Failed to reset password")
+    } catch (error) {
+      setError(formatFirebaseAuthError(error, "Failed to reset password"))
     }
 
     setLoading(false)
@@ -43,12 +44,12 @@ export default function ForgotPassword() {
               Reset Password
             </Button>
           </Form>
-          <div className="w-100 text-center mt-3">
+          <div className="w-100 text-center mt-3 ics-auth-helper">
             <Link to="/login">Login</Link>
           </div>
         </Card.Body>
       </Card>
-      <div className="w-100 text-center mt-2">
+      <div className="w-100 text-center mt-2 ics-auth-helper">
         Need an account? <Link to="/signup">Sign Up</Link>
       </div>
     </CenteredContainer>

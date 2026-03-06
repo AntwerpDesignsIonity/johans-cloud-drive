@@ -5,6 +5,14 @@ import { faFolder, faChevronRight, faHome } from "@fortawesome/free-solid-svg-ic
 import { storage } from "../../firebase"
 import { useAuth } from "../../contexts/AuthContext"
 import { ROOT_FOLDER, storagePathToId } from "../../hooks/useFolder"
+import {
+  copyStorageFile,
+  copyStorageFolder,
+  deleteStorageFolder,
+  normalizeStoragePath,
+  userRef,
+} from "../../services/storageOps"
+import { record } from "../../services/undoHistory"
 
 // Returns the parent storagePath (relative, without uid prefix) for an item.
 function getParentSP(storagePath, type) {
@@ -37,7 +45,7 @@ export default function MoveItemModal({ show, onHide, item, itemType, action }) 
   useEffect(() => {
     if (!show) return
     setLoading(true)
-    const basePath = `files/${currentUser.uid}/${currentFolder.storagePath || ""}`
+    const basePath = `files/shared/${currentFolder.storagePath || ""}`
     storage
       .ref(basePath)
       .listAll()
@@ -62,58 +70,45 @@ export default function MoveItemModal({ show, onHide, item, itemType, action }) 
   function navigateInto(folder) { setNavStack(prev => [...prev, folder]) }
   function navigateTo(index) { setNavStack(prev => prev.slice(0, index + 1)) }
 
-  // ── Storage helpers ──────────────────────────────────────────────────────────
-
-  async function copyFileRef(srcRef, destFullPath) {
-    const url = await srcRef.getDownloadURL()
-    const resp = await fetch(url)
-    const blob = await resp.blob()
-    await storage.ref(destFullPath).put(blob, { contentType: blob.type })
-  }
-
-  async function copyFolderRecursive(srcSP, destSP) {
-    const { items, prefixes } = await storage
-      .ref(`files/${currentUser.uid}/${srcSP}`)
-      .listAll()
-    await Promise.all(
-      items.map(ref =>
-        copyFileRef(ref, `files/${currentUser.uid}/${destSP}${ref.name}`)
-      )
-    )
-    await Promise.all(
-      prefixes.map(ref =>
-        copyFolderRecursive(srcSP + ref.name + "/", destSP + ref.name + "/")
-      )
-    )
-  }
-
-  async function deleteFolderRecursive(sp) {
-    const { items, prefixes } = await storage
-      .ref(`files/${currentUser.uid}/${sp}`)
-      .listAll()
-    await Promise.all(items.map(r => r.delete()))
-    await Promise.all(prefixes.map(r => deleteFolderRecursive(sp + r.name + "/")))
-  }
-
   // ── Action handler ───────────────────────────────────────────────────────────
 
   async function handleAction() {
     setWorking(true)
     try {
-      const destSP = currentFolder.storagePath || ""
+      const destSP = normalizeStoragePath(currentFolder.storagePath || "")
+      const sourceSP = normalizeStoragePath(itemType === "file" ? (item.storagePath || "") : (item.storagePath || ""))
+      if (!sourceSP) throw new Error("Invalid item path")
+
+      const itemParent = normalizeStoragePath(getParentSP(sourceSP, itemType))
+      const isSameParent = destSP === itemParent
+      const isSelfOrDescendant = itemType === "folder" && (destSP === sourceSP || destSP.startsWith(sourceSP))
+      if (isSameParent || isSelfOrDescendant) {
+        setWorking(false)
+        return
+      }
+
       if (itemType === "file") {
-        const srcRef = storage.ref(item.id) // item.id is the full Storage path
-        const destFullPath = `files/${currentUser.uid}/${destSP}${item.name}`
-        await copyFileRef(srcRef, destFullPath)
-        if (action === "move") await srcRef.delete()
+        const destFileSP = `${destSP}${item.name}`
+        await copyStorageFile(currentUser.uid, sourceSP, destFileSP)
+        if (action === "move") {
+          await userRef(currentUser.uid, sourceSP).delete()
+          record({ type: "MOVE_FILE", from: sourceSP, to: destFileSP })
+        } else {
+          record({ type: "COPY_FILE", from: sourceSP, dest: destFileSP })
+        }
       } else {
-        const folderName = (item.storagePath || "")
+        const folderName = sourceSP
           .replace(/\/$/, "")
           .split("/")
           .pop()
         const destFolderSP = destSP + folderName + "/"
-        await copyFolderRecursive(item.storagePath, destFolderSP)
-        if (action === "move") await deleteFolderRecursive(item.storagePath)
+        await copyStorageFolder(currentUser.uid, sourceSP, destFolderSP)
+        if (action === "move") {
+          await deleteStorageFolder(currentUser.uid, sourceSP)
+          record({ type: "MOVE_FOLDER", from: sourceSP, to: destFolderSP })
+        } else {
+          record({ type: "COPY_FOLDER", from: sourceSP, dest: destFolderSP })
+        }
       }
       window.dispatchEvent(new Event("ics-storage-updated"))
       onHide()
@@ -126,8 +121,9 @@ export default function MoveItemModal({ show, onHide, item, itemType, action }) 
   }
 
   const itemParentSP = getParentSP(item.storagePath || item.id || "", itemType)
-  const destSP = currentFolder.storagePath || ""
-  const isSameLocation = action === "move" && destSP === itemParentSP
+  const destSP = normalizeStoragePath(currentFolder.storagePath || "")
+  const isSameLocation = destSP === itemParentSP
+  const isSelfOrDescendant = itemType === "folder" && (destSP === (item.storagePath || "") || destSP.startsWith(item.storagePath || ""))
 
   const actionLabel = action === "move" ? "Move" : "Copy"
 
@@ -219,7 +215,7 @@ export default function MoveItemModal({ show, onHide, item, itemType, action }) 
           variant="primary"
           size="sm"
           onClick={handleAction}
-          disabled={isSameLocation || working}
+          disabled={isSameLocation || isSelfOrDescendant || working}
           style={{ minWidth: "100px" }}
         >
           {working ? (

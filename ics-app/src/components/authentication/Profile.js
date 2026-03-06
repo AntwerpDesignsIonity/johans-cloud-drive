@@ -32,7 +32,7 @@ export default function Profile() {
           </Link>
         </Card.Body>
       </Card>
-      <div className="w-100 text-center mt-2">
+      <div className="w-100 text-center mt-2 ics-auth-helper">
         <Button variant="link" onClick={handleLogout}>
           Log Out
         </Button>

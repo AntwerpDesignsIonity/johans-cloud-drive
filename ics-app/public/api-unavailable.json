@@ -1,0 +1,5 @@
+{
+  "error": "Gemini backend is temporarily unavailable. Cloud Function geminiProxy is not deployed yet.",
+  "status": 503,
+  "action": "Complete Cloud Build service account permissions and redeploy functions."
+}

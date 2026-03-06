@@ -5,7 +5,7 @@ import { faFolderPlus } from "@fortawesome/free-solid-svg-icons"
 import { storage } from "../../firebase"
 import { useAuth } from "../../contexts/AuthContext"
 
-export default function AddFolderButton({ currentFolder }) {
+export default function AddFolderButton({ currentFolder, isShared }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const { currentUser } = useAuth()
@@ -19,18 +19,29 @@ export default function AddFolderButton({ currentFolder }) {
   function handleSubmit(e) {
     e.preventDefault()
     if (!name.trim()) return
-    const currentPath = currentFolder ? currentFolder.storagePath || "" : ""
-    const placeholderPath = `files/${currentUser.uid}/${currentPath}${name.trim()}/.keep`
+    let currentPath = currentFolder ? currentFolder.storagePath || "" : ""
+    if (currentPath && !currentPath.endsWith("/")) {
+      currentPath += "/"
+    }
+    const basePath = isShared ? "files/shared/" : `files/${currentUser.uid}/`
+const placeholderPath = `${basePath}${currentPath}${name.trim()}/.keep`
+    
     // Upload tiny placeholder to create the virtual folder in Storage
+    const blob = new Blob([" "], { type: "text/plain" })
     storage
       .ref(placeholderPath)
-      .putString("")
+      .put(blob)
       .then(() => {
-        // Trigger a re-read by dispatching the same event AddFileButton uses
-        window.dispatchEvent(new Event("ics-storage-updated"))
+        // Delay slightly to give Firebase Storage index time to update
+        setTimeout(() => {
+          window.dispatchEvent(new Event("ics-storage-updated"))
+        }, 500)
         closeModal()
       })
-      .catch(err => console.error("Create folder error:", err))
+      .catch(err => {
+        console.error("Create folder error:", err)
+        alert("Failed to create folder: " + err.message)
+      })
   }
 
   return (

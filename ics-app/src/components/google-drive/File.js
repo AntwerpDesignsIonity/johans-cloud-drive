@@ -12,6 +12,8 @@ import {
   faFileVideo,
   faFileCode,
   faStar,
+  faEye,
+  faDownload,
 } from "@fortawesome/free-solid-svg-icons"
 import { useAuth } from "../../contexts/AuthContext"
 import { toggleFavorite } from "../../hooks/useFolder"
@@ -53,7 +55,7 @@ function formatDate(ts) {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
 }
 
-export default function File({ file, listView }) {
+export default function File({ file, listView, onPreview, selected, onToggleSelect, selectionActive, isShared }) {
   const { icon, color } = getFileTypeInfo(file.name)
   const { currentUser } = useAuth()
   const [imgErr, setImgErr] = useState(false)
@@ -64,6 +66,50 @@ export default function File({ file, listView }) {
     e.stopPropagation()
     toggleFavorite(currentUser.uid, file.storagePath)
   }
+
+  function handlePreviewClick(e) {
+    if (onPreview) {
+      e.preventDefault()
+      e.stopPropagation()
+      onPreview(file)
+    }
+  }
+
+  async function handleDownloadClick(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    try {
+      const resp = await fetch(file.url)
+      const blob = await resp.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = blobUrl
+      a.download = file.name
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
+    } catch {
+      window.open(file.url, "_blank")
+    }
+  }
+
+  function handleCheckboxChange(e) {
+    e.stopPropagation()
+    if (onToggleSelect) onToggleSelect(file.id)
+  }
+
+  const checkbox = (
+    <input
+      type="checkbox"
+      className="ics-select-checkbox"
+      checked={!!selected}
+      onChange={handleCheckboxChange}
+      onClick={e => e.stopPropagation()}
+      style={{ opacity: (selectionActive || selected) ? 1 : undefined }}
+      title="Select"
+    />
+  )
 
   const iconBlock = showThumb ? (
     <img src={file.url} alt="" className="ics-thumb" onError={() => setImgErr(true)} />
@@ -85,15 +131,17 @@ export default function File({ file, listView }) {
   if (listView) {
     return (
       <div
-        className="ics-item-card ics-fade-in d-flex align-items-center px-2"
+        className={`ics-item-card ics-fade-in d-flex align-items-center px-2${selected ? " ics-selected" : ""}`}
         style={{ minWidth: 0, gap: "6px", height: "44px" }}
       >
+        {checkbox}
         <a
-          href={file.url}
+          href={selected ? undefined : file.url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={selectionActive || selected ? e => { e.preventDefault(); if (onToggleSelect) onToggleSelect(file.id) } : undefined}
           className="d-flex align-items-center text-dark text-decoration-none"
-          style={{ minWidth: 0, gap: "9px", padding: "0 2px", flex: "1 1 0" }}
+          style={{ minWidth: 0, gap: "9px", padding: "0 2px 0 22px", flex: "1 1 0" }}
           title={file.name}
         >
           {iconBlock}
@@ -114,6 +162,24 @@ export default function File({ file, listView }) {
             </span>
           ) : null}
         </span>
+        {onPreview && (
+          <button
+            onClick={handlePreviewClick}
+            className="btn btn-link p-0 ics-preview-btn"
+            style={{ color: "#a0b4cc", lineHeight: 1, flexShrink: 0, fontSize: "0.75rem", transition: "color 0.15s" }}
+            title="Quick preview"
+          >
+            <FontAwesomeIcon icon={faEye} />
+          </button>
+        )}
+        <button
+          onClick={handleDownloadClick}
+          className="btn btn-link p-0"
+          style={{ color: "#8fb49c", lineHeight: 1, flexShrink: 0, fontSize: "0.75rem", transition: "color 0.15s" }}
+          title="Download file"
+        >
+          <FontAwesomeIcon icon={faDownload} />
+        </button>
         <button
           onClick={handleFavToggle}
           className="btn btn-link p-0"
@@ -122,23 +188,25 @@ export default function File({ file, listView }) {
         >
           <FontAwesomeIcon icon={faStar} />
         </button>
-        <ItemContextMenu item={file} itemType="file" />
+        <ItemContextMenu item={file} isShared={isShared} itemType="file" />
       </div>
     )
   }
 
   return (
     <div
-      className="ics-item-card ics-fade-in d-flex align-items-center px-2"
+      className={`ics-item-card ics-fade-in d-flex align-items-center px-2${selected ? " ics-selected" : ""}`}
       style={{ minWidth: 0, gap: "4px", height: "42px" }}
     >
+      {checkbox}
       {/* Clickable file name + icon/thumb */}
       <a
-        href={file.url}
-        target="_blank"
+        href={(selectionActive || selected) ? undefined : (onPreview ? undefined : file.url)}
+        target={onPreview ? undefined : "_blank"}
         rel="noopener noreferrer"
+        onClick={(selectionActive || selected) ? e => { e.preventDefault(); if (onToggleSelect) onToggleSelect(file.id) } : (onPreview ? handlePreviewClick : undefined)}
         className="d-flex align-items-center flex-grow-1 text-dark text-decoration-none"
-        style={{ minWidth: 0, gap: "9px", padding: "0 2px" }}
+        style={{ minWidth: 0, gap: "9px", padding: "0 2px 0 22px", cursor: "pointer" }}
         title={file.name}
       >
         {iconBlock}
@@ -157,8 +225,29 @@ export default function File({ file, listView }) {
         <FontAwesomeIcon icon={faStar} />
       </button>
 
+      <button
+        onClick={handleDownloadClick}
+        className="btn btn-link p-0"
+        style={{ color: "#8fb49c", lineHeight: 1, flexShrink: 0, fontSize: "0.75rem", transition: "color 0.15s" }}
+        title="Download file"
+      >
+        <FontAwesomeIcon icon={faDownload} />
+      </button>
+
       {/* Three-dot menu */}
-      <ItemContextMenu item={file} itemType="file" />
+      <ItemContextMenu item={file} isShared={isShared} itemType="file" />
+
+      {/* Preview eye – shows on hover via CSS */}
+      {onPreview && (
+        <button
+          onClick={handlePreviewClick}
+          className="btn btn-link p-0 ics-preview-btn"
+          style={{ color: "#a0b4cc", lineHeight: 1, flexShrink: 0, fontSize: "0.75rem", transition: "color 0.15s" }}
+          title="Quick preview"
+        >
+          <FontAwesomeIcon icon={faEye} />
+        </button>
+      )}
     </div>
   )
 }

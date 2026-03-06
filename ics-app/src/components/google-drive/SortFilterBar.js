@@ -95,7 +95,7 @@ export default function SortFilterBar({
 }) {
   return (
     <div
-      className="d-flex align-items-center flex-wrap"
+      className="ics-sortbar d-flex align-items-center flex-wrap"
       style={{
         gap: "7px",
         padding: "7px 11px",
@@ -121,9 +121,10 @@ export default function SortFilterBar({
         </InputGroup.Prepend>
         <Form.Control
           type="text"
-          placeholder="Search files & folders…"
+          placeholder="Search… (press / to focus)"
           value={search}
           onChange={e => setSearch(e.target.value)}
+          className="ics-search-input"
           style={{
             border: "1px solid #dde4ee",
             borderLeft: "none",
@@ -156,7 +157,7 @@ export default function SortFilterBar({
       <span style={DIVIDER_STYLE} />
 
       {/* ── Sort label + dropdown ──────────────────────────────────── */}
-      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aab", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+      <span className="ics-sortbar-label" style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aab", textTransform: "uppercase", letterSpacing: "0.07em" }}>
         Sort
       </span>
       <DropdownButton
@@ -200,7 +201,7 @@ export default function SortFilterBar({
       <span style={DIVIDER_STYLE} />
 
       {/* ── View mode ──────────────────────────────────────────────── */}
-      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aab", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+      <span className="ics-sortbar-label" style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aab", textTransform: "uppercase", letterSpacing: "0.07em" }}>
         View
       </span>
       <Button

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faFolder, faStar } from "@fortawesome/free-solid-svg-icons"
 import ItemContextMenu from "./ItemContextMenu"
+import { storagePathToId } from "../../hooks/useFolder"
 
 function formatDate(ts) {
   if (!ts) return ""
@@ -10,8 +11,25 @@ function formatDate(ts) {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
 }
 
-export default function Folder({ folder, listView, childNames }) {
-  const encodedPath = btoa(folder.storagePath || folder.id)
+export default function Folder({ folder, listView, childNames, selected, onToggleSelect, selectionActive, isShared }) {
+  const encodedPath = storagePathToId(folder.storagePath || "")
+
+  function handleCheckboxChange(e) {
+    e.stopPropagation()
+    if (onToggleSelect) onToggleSelect(folder.id)
+  }
+
+  const checkbox = (
+    <input
+      type="checkbox"
+      className="ics-select-checkbox"
+      checked={!!selected}
+      onChange={handleCheckboxChange}
+      onClick={e => e.stopPropagation()}
+      style={{ opacity: (selectionActive || selected) ? 1 : undefined }}
+      title="Select"
+    />
+  )
 
   const iconBlock = (
     <span
@@ -32,13 +50,15 @@ export default function Folder({ folder, listView, childNames }) {
   if (listView) {
     return (
       <div
-        className="ics-item-card ics-fade-in d-flex align-items-center px-2"
+        className={`ics-item-card ics-fade-in d-flex align-items-center px-2${selected ? " ics-selected" : ""}`}
         style={{ minWidth: 0, gap: "6px", height: "44px" }}
       >
+        {checkbox}
         <Link
-          to={`/folder/${encodedPath}`}
+          to={(selectionActive || selected) ? "#" : `/folder/${encodedPath}`}
+          onClick={selectionActive || selected ? e => { e.preventDefault(); if (onToggleSelect) onToggleSelect(folder.id) } : undefined}
           className="d-flex align-items-center text-dark text-decoration-none"
-          style={{ minWidth: 0, gap: "9px", padding: "0 2px", flex: "1 1 0" }}
+          style={{ minWidth: 0, gap: "9px", padding: "0 2px 0 22px", flex: "1 1 0" }}
           title={folder.name}
         >
           {iconBlock}
@@ -59,20 +79,22 @@ export default function Folder({ folder, listView, childNames }) {
             </span>
           ) : null}
         </span>
-        <ItemContextMenu item={folder} itemType="folder" childNames={childNames} />
+        <ItemContextMenu item={folder} isShared={isShared} itemType="folder" childNames={childNames} />
       </div>
     )
   }
 
   return (
     <div
-      className="ics-item-card ics-fade-in d-flex align-items-center px-2"
+      className={`ics-item-card ics-fade-in d-flex align-items-center px-2${selected ? " ics-selected" : ""}`}
       style={{ minWidth: 0, gap: "4px", height: "42px" }}
     >
+      {checkbox}
       <Link
-        to={`/folder/${encodedPath}`}
+        to={(selectionActive || selected) ? "#" : `/folder/${encodedPath}`}
+        onClick={selectionActive || selected ? e => { e.preventDefault(); if (onToggleSelect) onToggleSelect(folder.id) } : undefined}
         className="d-flex align-items-center flex-grow-1 text-dark text-decoration-none"
-        style={{ minWidth: 0, gap: "9px", padding: "0 2px" }}
+        style={{ minWidth: 0, gap: "9px", padding: "0 2px 0 22px" }}
         title={folder.name}
       >
         {iconBlock}
@@ -83,7 +105,7 @@ export default function Folder({ folder, listView, childNames }) {
           <FontAwesomeIcon icon={faStar} style={{ color: "#f5c518", fontSize: "0.65rem", flexShrink: 0, marginLeft: "2px" }} />
         )}
       </Link>
-      <ItemContextMenu item={folder} itemType="folder" childNames={childNames} />
+      <ItemContextMenu item={folder} isShared={isShared} itemType="folder" childNames={childNames} />
     </div>
   )
 }

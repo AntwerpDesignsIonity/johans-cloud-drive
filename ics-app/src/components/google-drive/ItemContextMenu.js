@@ -29,7 +29,7 @@ import AiResultModal from "./AiResultModal"
 import MoveItemModal from "./MoveItemModal"
 import RenameModal from "./RenameModal"
 
-export default function ItemContextMenu({ item, itemType, childNames }) {
+export default function ItemContextMenu({ item, itemType, childNames, isShared }) {
   const { currentUser } = useAuth()
   const [showMove, setShowMove] = useState(false)
   const [moveAction, setMoveAction] = useState("move")
@@ -57,7 +57,7 @@ export default function ItemContextMenu({ item, itemType, childNames }) {
       if (itemType === "file") {
         await storage.ref(item.id).delete()
       } else {
-        const folderRef = storage.ref(`files/${currentUser.uid}/${item.storagePath}`)
+        const folderRef = storage.ref(`${isShared ? "files/shared/" : "files/" + currentUser.uid + "/"}${item.storagePath}`)
         await deleteStorageFolderRecursive(folderRef)
       }
       window.dispatchEvent(new Event("ics-storage-updated"))
@@ -130,6 +130,7 @@ export default function ItemContextMenu({ item, itemType, childNames }) {
 
         <Dropdown.Menu
           alignRight
+          onClick={e => e.stopPropagation()}
           style={{
             fontSize: "0.84rem",
             minWidth: "195px",
@@ -137,6 +138,7 @@ export default function ItemContextMenu({ item, itemType, childNames }) {
             border: "1.5px solid #dde4ee",
             boxShadow: "0 6px 24px rgba(0,51,102,0.13)",
             padding: "4px 0",
+            zIndex: 1300,
           }}
         >
           {/* ─── File-only: open & download ─── */}
@@ -152,8 +154,23 @@ export default function ItemContextMenu({ item, itemType, childNames }) {
                 Open
               </Dropdown.Item>
               <Dropdown.Item
-                href={item.url}
-                download={item.name}
+                onClick={async e => {
+                  e.stopPropagation()
+                  try {
+                    const resp = await fetch(item.url)
+                    const blob = await resp.blob()
+                    const blobUrl = URL.createObjectURL(blob)
+                    const a = document.createElement("a")
+                    a.href = blobUrl
+                    a.download = item.name
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
+                  } catch (err) {
+                    window.open(item.url, "_blank")
+                  }
+                }}
                 style={{ display: "flex", alignItems: "center", gap: "8px" }}
               >
                 <FontAwesomeIcon icon={faDownload} style={{ color: "#4CAF50", width: 14 }} />
@@ -355,60 +372,6 @@ export default function ItemContextMenu({ item, itemType, childNames }) {
       )}
 
       {/* ─── Rename modal ─── */}
-      {showRename && (
-        <RenameModal
-          show={showRename}
-          onHide={() => setShowRename(false)}
-          item={item}
-          itemType={itemType}
-        />
-      )}
-    </>
-  )
-}
-              <Dropdown.Item
-                onClick={e => { e.stopPropagation(); doAiAction("ocr") }}
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
-              >
-                <FontAwesomeIcon icon={faSearchPlus} style={{ color: "#4A90E2", width: 14 }} />
-                OCR Extract Text
-              </Dropdown.Item>
-            </>
-          )}
-
-          {/* ─── Delete ─── */}
-          <Dropdown.Divider />
-          <Dropdown.Item
-            onClick={handleDelete}
-            className="text-danger"
-            style={{ display: "flex", alignItems: "center", gap: "8px" }}
-          >
-            <FontAwesomeIcon icon={faTrashAlt} style={{ width: 14 }} />
-            Delete
-          </Dropdown.Item>
-        </Dropdown.Menu>
-      </Dropdown>
-
-      {/* ─── Modals ─── */}
-      <AiResultModal
-        show={aiModal.show}
-        onHide={() => setAiModal(prev => ({ ...prev, show: false }))}
-        title={aiModal.title}
-        result={aiModal.result}
-        error={aiModal.error}
-        loading={aiModal.loading}
-      />
-
-      {showMove && (
-        <MoveItemModal
-          show={showMove}
-          onHide={() => setShowMove(false)}
-          item={item}
-          itemType={itemType}
-          action={moveAction}
-        />
-      )}
-
       {showRename && (
         <RenameModal
           show={showRename}

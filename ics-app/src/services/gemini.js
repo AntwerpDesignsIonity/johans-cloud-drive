@@ -1,11 +1,10 @@
 /**
  * Gemini AI Service
- * Provides AI-powered file summaries and OCR via Google Gemini 1.5 Flash
+ * Provides AI-powered file summaries and OCR via Google Gemini 2.0 Flash
  */
 
-const MODEL = "gemini-1.5-flash"
-const GEMINI_URL = () =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "/api"
+const GEMINI_URL = () => `${API_BASE_URL}/gemini`
 
 const IMAGE_EXTS = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "tiff", "tif", "svg"]
 const TEXT_EXTS = [
@@ -33,29 +32,51 @@ async function urlToBase64(url) {
 }
 
 async function callGemini(parts) {
-  const apiKey = process.env.REACT_APP_GEMINI_API_KEY
-  if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE") {
-    throw new Error(
-      "Gemini API key not configured. Add REACT_APP_GEMINI_API_KEY=<your_key> to your .env file."
-    )
-  }
   const response = await fetch(GEMINI_URL(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: {
-        maxOutputTokens: 2048,
-        temperature: 0.4,
-      },
-    }),
+    body: JSON.stringify({ parts }),
   })
-  const data = await response.json()
-  if (data.error) throw new Error(`Gemini error: ${data.error.message}`)
-  if (data.candidates?.length > 0) {
-    return data.candidates[0].content.parts[0].text
+
+  const contentType = response.headers.get("content-type") || ""
+  let data = null
+  let rawText = ""
+
+  if (contentType.includes("application/json")) {
+    data = await response.json()
+  } else {
+    rawText = await response.text()
   }
-  throw new Error("Gemini returned no response. Check your API key and quota.")
+
+  if (!response.ok) {
+    if (data?.error) {
+      throw new Error(`Gemini backend error: ${data.error}`)
+    }
+
+    if (rawText.trim().startsWith("<")) {
+      throw new Error(
+        "Gemini backend endpoint is unavailable and returned HTML instead of JSON. Ensure Cloud Function 'geminiProxy' is deployed and healthy."
+      )
+    }
+
+    throw new Error(`Gemini backend error: HTTP ${response.status}`)
+  }
+
+  if (!data) {
+    if (rawText.trim().startsWith("<")) {
+      throw new Error(
+        "Gemini backend endpoint returned HTML instead of JSON. Check Firebase Hosting rewrite and Cloud Function deployment."
+      )
+    }
+    throw new Error("Gemini backend returned an unexpected non-JSON response.")
+  }
+
+  if (data.error) {
+    throw new Error(`Gemini backend error: ${data.error}`)
+  }
+
+  if (data.text) return data.text
+  throw new Error("Gemini backend returned no response text.")
 }
 
 /**
@@ -285,4 +306,53 @@ export async function summarizeFolder(folderName, childNames) {
     },
   ]
   return callGemini(parts)
+}
+
+/**
+ * Batch-summarize multiple files at once.
+ * Calls summarizeFile for each and returns a structured report.
+ * Useful for getting a quick overview of many files.
+ *
+ * @param {Array<{name: string, url: string}>} files
+ * @param {function(number, number):void}      onProgress  – (done, total)
+ * @returns {Promise<string>}  Markdown-formatted report
+ */
+export async function batchSummarize(files, onProgress) {
+  if (!files || files.length === 0) return "No files provided."
+
+  const results = []
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i]
+    if (onProgress) onProgress(i, files.length)
+    try {
+      const summary = await summarizeFile(f.url, f.name)
+      results.push({ name: f.name, summary, error: null })
+    } catch (e) {
+      results.push({ name: f.name, summary: null, error: e.message })
+    }
+  }
+  if (onProgress) onProgress(files.length, files.length)
+
+  // Build a readable Markdown report
+  const lines = [`## Batch Summary — ${files.length} file(s)\n`]
+  results.forEach((r, idx) => {
+    lines.push(`### ${idx + 1}. ${r.name}`)
+    if (r.error) {
+      lines.push(`> ⚠️ Error: ${r.error}`)
+    } else {
+      lines.push(r.summary || "_No summary returned._")
+    }
+    lines.push("")
+  })
+  return lines.join("\n")
+}
+
+export async function generateContent(prompt) {
+  try {
+    const resultText = await callGemini([{ text: prompt }])
+    return resultText
+  } catch (err) {
+    console.error("AI Generation error:", err)
+    throw new Error("Failed to generate content: " + err.message)
+  }
 }

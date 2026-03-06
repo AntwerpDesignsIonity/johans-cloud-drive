@@ -59,7 +59,7 @@ function reducer(state, { type, payload }) {
 
 // folderId is a base64-encoded storagePath (e.g. btoa("myFolder/")).
 // Falls back to root when folderId is null/undefined or cannot be decoded.
-export function useFolder(folderId = null) {
+export function useFolder(folderId = null, isShared = false) {
   const { currentUser } = useAuth()
 
   // Decode storagePath from URL param
@@ -94,7 +94,7 @@ export function useFolder(folderId = null) {
     let cancelled = false
     const favs = getFavSet(currentUser.uid)
     storage
-      .ref(`files/${currentUser.uid}/${storagePath}`)
+      .ref(`${isShared ? "files/shared/" : "files/" + currentUser.uid + "/"}${storagePath}`)
       .listAll()
       .then(result => {
         if (cancelled) return
@@ -128,7 +128,7 @@ export function useFolder(folderId = null) {
       })
       .catch(err => console.error("Storage list error:", err))
     return () => { cancelled = true }
-  }, [currentUser, storagePath])
+  }, [currentUser, storagePath, isShared])
 
   useEffect(() => {
     const cleanup = loadContents()

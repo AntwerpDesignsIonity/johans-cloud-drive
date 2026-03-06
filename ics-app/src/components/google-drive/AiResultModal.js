@@ -7,7 +7,7 @@ import { faRobot, faClipboard, faTags, faCheck, faPaperPlane } from "@fortawesom
  * mode: "summary" | "ocr" | "tags" | "rename" | "ask"
  * onFollowUp(question): optional callback to run a follow-up AI question
  */
-export default function AiResultModal({ show, onHide, title, result, error, loading, mode, onFollowUp }) {
+export default function AiResultModal({ show, onHide, title, result, error, loading, loadingText, mode, onFollowUp }) {
   const [copied, setCopied] = useState(false)
   const [followUp, setFollowUp] = useState("")
 
@@ -51,7 +51,9 @@ export default function AiResultModal({ show, onHide, title, result, error, load
       return (
         <div className="text-center py-4">
           <Spinner animation="border" variant="primary" style={{ width: "2.5rem", height: "2.5rem" }} />
-          <p className="mt-3 mb-0" style={{ color: "#6b7d92", fontWeight: 500 }}>Processing with Gemini AI…</p>
+          <p className="mt-3 mb-0" style={{ color: "#6b7d92", fontWeight: 500 }}>
+            {loadingText || "Processing with Gemini AI…"}
+          </p>
           <small style={{ color: "#a0b0c4" }}>This may take a few seconds</small>
         </div>
       )
@@ -138,6 +140,34 @@ export default function AiResultModal({ show, onHide, title, result, error, load
               </div>
             ))}
           </div>
+        </div>
+      )
+    }
+
+    // Batch mode – render as structured report
+    if (mode === "batch") {
+      return (
+        <div
+          style={{
+            maxHeight: "60vh",
+            overflowY: "auto",
+            padding: "1rem",
+            background: "#f8fafc",
+            borderRadius: "8px",
+            border: "1px solid #e4eaf2",
+          }}
+        >
+          {result.split(/\n(?=###? )/).map((section, i) => (
+            <div
+              key={i}
+              style={{
+                marginBottom: "1rem",
+                paddingBottom: "1rem",
+                borderBottom: "1px solid #e4eaf2",
+              }}
+              dangerouslySetInnerHTML={{ __html: formatMarkdown(section) }}
+            />
+          ))}
         </div>
       )
     }
@@ -231,12 +261,14 @@ export default function AiResultModal({ show, onHide, title, result, error, load
 // Badge colour palette for tags
 const BADGE_COLORS = ["#4A90E2", "#2ECC71", "#9B59B6", "#E67E22", "#E74C3C", "#1ABC9C", "#3498DB", "#F39C12", "#16A085", "#8E44AD"]
 
-// Very lightweight markdown-to-HTML: bold, inline code, line breaks
+// Very lightweight markdown-to-HTML: headings, bold, inline code, line breaks
 function formatMarkdown(text) {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
+    .replace(/^## (.+)$/gm, `<h5 style="font-size:0.92rem;font-weight:700;color:#1c2b3a;margin:0.75rem 0 0.25rem;">$1</h5>`)
+    .replace(/^### (.+)$/gm, `<h6 style="font-size:0.85rem;font-weight:700;color:#003d80;margin:0.6rem 0 0.2rem;">$1</h6>`)
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/`([^`]+)`/g, `<code style="background:#eef1f7;padding:1px 5px;border-radius:4px;font-size:0.85em;">$1</code>`)
     .replace(/\n/g, "<br />")

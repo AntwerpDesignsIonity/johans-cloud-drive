@@ -3,6 +3,7 @@ import { Form, Button, Card, Alert } from "react-bootstrap"
 import { useAuth } from "../../contexts/AuthContext"
 import { Link, useHistory } from "react-router-dom"
 import CenteredContainer from "./CenteredContainer"
+import { formatFirebaseAuthError } from "../../services/firebaseAuthErrors"
 
 export default function UpdateProfile() {
   const emailRef = useRef()
@@ -34,8 +35,8 @@ export default function UpdateProfile() {
       .then(() => {
         history.push("/user")
       })
-      .catch(() => {
-        setError("Failed to update account")
+      .catch(error => {
+        setError(formatFirebaseAuthError(error, "Failed to update account"))
       })
       .finally(() => {
         setLoading(false)
@@ -80,7 +81,7 @@ export default function UpdateProfile() {
           </Form>
         </Card.Body>
       </Card>
-      <div className="w-100 text-center mt-2">
+      <div className="w-100 text-center mt-2 ics-auth-helper">
         <Link to="/user">Cancel</Link>
       </div>
     </CenteredContainer>

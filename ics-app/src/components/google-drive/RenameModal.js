@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useRef } from "react"
 import { Modal, Button, Form, Spinner } from "react-bootstrap"
-import { storage } from "../../firebase"
 import { useAuth } from "../../contexts/AuthContext"
+import {
+  copyStorageFile,
+  copyStorageFolder,
+  deleteStorageFolder,
+  getParentSP,
+  normalizeStoragePath,
+  triggerRefresh,
+  userRef,
+} from "../../services/storageOps"
+import { record } from "../../services/undoHistory"
 
 export default function RenameModal({ show, onHide, item, itemType }) {
   const { currentUser } = useAuth()
@@ -23,53 +32,48 @@ export default function RenameModal({ show, onHide, item, itemType }) {
       onHide()
       return
     }
+
+    if (/[\\]/.test(trimmed)) {
+      alert("Rename failed: backslash (\\) is not allowed in names.")
+      return
+    }
+
+    if (itemType === "file" && trimmed.includes("/")) {
+      alert("Rename failed: file names cannot contain '/'.")
+      return
+    }
+
     setWorking(true)
     try {
-      const oldId = item.id // full storage path, e.g. "files/uid/photo.jpg" or "files/uid/Folder"
-      const parentPath = oldId.includes("/")
-        ? oldId.substring(0, oldId.lastIndexOf("/") + 1)
-        : ""
-      const newId = parentPath + trimmed
+      const sourceSP = normalizeStoragePath(itemType === "file" ? item.storagePath : (item.storagePath || ""))
+      if (!sourceSP) throw new Error("Invalid item path")
+
+      const cleanName = itemType === "folder" ? trimmed.replace(/\/+$/, "") : trimmed
+      const parentSP = normalizeStoragePath(getParentSP(sourceSP))
+      const destSP = itemType === "folder" ? `${parentSP}${cleanName}/` : `${parentSP}${cleanName}`
+
+      if (destSP === sourceSP) {
+        onHide()
+        return
+      }
 
       if (itemType === "file") {
-        const oldRef = storage.ref(oldId)
-        const url = await oldRef.getDownloadURL()
-        const resp = await fetch(url)
-        const blob = await resp.blob()
-        await storage.ref(newId).put(blob)
-        await oldRef.delete()
+        await copyStorageFile(currentUser.uid, sourceSP, destSP)
+        await userRef(currentUser.uid, sourceSP).delete()
+        record({ type: "RENAME_FILE", from: sourceSP, to: destSP })
       } else {
-        // Recursively copy folder contents to new prefix, then delete old
-        await copyStorageFolder(storage.ref(oldId), newId)
-        await deleteStorageFolder(storage.ref(oldId))
+        await copyStorageFolder(currentUser.uid, sourceSP, destSP)
+        await deleteStorageFolder(currentUser.uid, sourceSP)
+        record({ type: "RENAME_FOLDER", from: sourceSP, to: destSP })
       }
+
+      triggerRefresh()
       onHide()
-      window.location.reload()
     } catch (err) {
       alert("Rename failed: " + err.message)
     } finally {
       setWorking(false)
     }
-  }
-
-  async function copyStorageFolder(srcRef, destPrefix) {
-    const { items, prefixes } = await srcRef.listAll()
-    await Promise.all(
-      items.map(async itemRef => {
-        const url = await itemRef.getDownloadURL()
-        const resp = await fetch(url)
-        const blob = await resp.blob()
-        const relativeName = itemRef.fullPath.substring(srcRef.fullPath.length + 1)
-        await storage.ref(destPrefix + "/" + relativeName).put(blob)
-      })
-    )
-    await Promise.all(prefixes.map(p => copyStorageFolder(p, destPrefix + "/" + p.name)))
-  }
-
-  async function deleteStorageFolder(folderRef) {
-    const { items, prefixes } = await folderRef.listAll()
-    await Promise.all(items.map(f => f.delete()))
-    await Promise.all(prefixes.map(p => deleteStorageFolder(p)))
   }
 
   const headerGradient = "linear-gradient(90deg, #002244 0%, #003d80 100%)"
